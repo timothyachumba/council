@@ -1,0 +1,11 @@
+{
+  "id": "claude-vault",
+  "name": "Claude Vault",
+  "version": "0.1.0",
+  "minAppVersion": "1.0.0",
+  "description": "Native Claude Code chat interface inside Obsidian",
+  "author": "Timothy Achumba",
+  "authorUrl": "",
+  "fundingUrl": "",
+  "isDesktopOnly": true
+}

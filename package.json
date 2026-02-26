@@ -1,0 +1,22 @@
+{
+  "name": "claude-vault",
+  "version": "0.1.0",
+  "description": "Native Claude Code chat interface inside Obsidian",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "builtin-modules": "^4.0.0",
+    "esbuild": "^0.24.0",
+    "obsidian": "latest",
+    "tslib": "2.6.0",
+    "typescript": "5.3.3"
+  },
+  "dependencies": {
+    "motion": "^12.34.3",
+    "torph": "^0.0.5"
+  }
+}

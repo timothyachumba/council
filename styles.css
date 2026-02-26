@@ -1,0 +1,1107 @@
+/* ─── Claude Vault ───────────────────────────────────────────────────────── */
+
+.workspace-leaf-content[data-type="claude-vault:chat"] .view-content {
+  padding: 0;
+}
+
+/* ─── Custom surface tokens ─────────────────────────────────────────────── */
+/* Minimal theme can make --background-primary and --background-secondary
+   identical. We use color-mix to guarantee visible contrast in both modes. */
+
+.theme-light .cv-root {
+  --cv-surface: color-mix(in srgb, var(--background-primary) 96%, black);
+  --cv-surface-bold: color-mix(in srgb, var(--background-primary) 97%, white);
+  --cv-surface-border: color-mix(in srgb, var(--background-primary) 88%, black);
+  --cv-surface-bold-border: color-mix(in srgb, var(--background-primary) 92%, black);
+  --cv-agent-recessed: color-mix(in srgb, var(--background-secondary) 95%, black);
+  --cv-agent-pill: color-mix(in srgb, var(--background-secondary) 88%, black);
+}
+
+.theme-dark .cv-root {
+  --cv-surface: color-mix(in srgb, var(--background-primary) 95%, white);
+  --cv-surface-bold: color-mix(in srgb, var(--background-primary) 97%, black);
+  --cv-surface-border: color-mix(in srgb, var(--background-primary) 80%, white);
+  --cv-surface-bold-border: color-mix(in srgb, var(--background-primary) 90%, white);
+  --cv-agent-recessed: color-mix(in srgb, var(--background-secondary) 88%, black);
+  --cv-agent-pill: color-mix(in srgb, var(--background-secondary) 92%, white);
+}
+
+.cv-root {
+  --cv-agent-edge:  #6366f1;
+  --cv-agent-loom:  #22c55e;
+  --cv-agent-ember: #ec4899;
+  --cv-agent-quill: #f59e0b;
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--background-primary);
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
+}
+
+/* ─── Icon buttons (Obsidian native pattern) ─────────────────────────────── */
+
+.cv-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border-radius: var(--radius-s);
+  color: var(--icon-color);
+  cursor: pointer;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.cv-header {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  flex-shrink: 0;
+}
+
+.cv-header__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  padding: 0 var(--size-4-2);
+  position: relative;
+  z-index: 1;
+}
+
+.cv-header__spacer {
+  flex: 1;
+}
+
+/* ─── Messages ───────────────────────────────────────────────────────────── */
+
+.cv-messages-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.cv-messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-4);
+  padding: var(--size-4-4) var(--size-4-4) var(--size-4-2);
+}
+
+/* ─── User bubble ────────────────────────────────────────────────────────── */
+
+.cv-message--user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cv-message--user .cv-bubble {
+  background: var(--cv-surface);
+  color: var(--text-normal);
+  border-radius: 16px;
+  padding: 12px;
+  max-width: 80%;
+  font-size: var(--font-ui-medium);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* ─── Assistant text ─────────────────────────────────────────────────────── */
+
+.cv-message--assistant {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cv-text {
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  min-width: 0;
+}
+
+.cv-text p { margin: 0 0 var(--size-4-2); }
+.cv-text p:last-child { margin-bottom: 0; }
+
+.cv-text h1,
+.cv-text h2,
+.cv-text h3,
+.cv-text h4 {
+  margin: 20px 0 var(--size-4-2);
+}
+
+.cv-text h1:first-child,
+.cv-text h2:first-child,
+.cv-text h3:first-child,
+.cv-text h4:first-child {
+  margin-top: 0;
+}
+
+.cv-text ul,
+.cv-text ol {
+  padding-left: 1em;
+}
+
+.cv-text blockquote {
+  margin: var(--size-4-2) 0;
+  padding: 0 0 0 1em;
+  border-left: 2px solid var(--background-modifier-border);
+}
+
+.cv-text table {
+  border-collapse: collapse;
+  margin: var(--size-4-2) 0;
+}
+
+.cv-text th,
+.cv-text td {
+  border: 1px solid var(--background-modifier-border);
+  padding: 6px 10px;
+}
+
+.cv-text th {
+  font-weight: 600;
+}
+
+.cv-text hr {
+  border: none;
+  border-top: 1px solid var(--background-modifier-border);
+  margin: var(--size-4-12) 0;
+}
+
+.cv-text code {
+  background: var(--background-secondary);
+  padding: 1px 4px;
+  border-radius: var(--radius-s);
+  font-size: 0.9em;
+}
+
+.cv-text pre {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  margin: var(--size-4-2) 0;
+}
+
+/* ─── Thinking timeline ──────────────────────────────────────────────────── */
+
+.cv-timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header: dots/icon + label + chevron */
+.cv-timeline__header {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding-top: 3px;
+  cursor: default;
+}
+
+.cv-timeline--complete .cv-timeline__header {
+  cursor: pointer;
+}
+
+.cv-timeline__header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+}
+
+.cv-timeline__label {
+  font-size: var(--font-ui-medium);
+  color: var(--text-muted);
+}
+
+.cv-timeline__chevron {
+  display: none;
+  width: 16px;
+  height: 16px;
+  color: var(--text-faint);
+  transition: transform 200ms ease;
+}
+
+.cv-timeline__chevron--visible {
+  display: flex;
+}
+
+.cv-timeline__chevron--open {
+  transform: rotate(90deg);
+}
+
+/* Body: rail + content */
+.cv-timeline__body {
+  display: flex;
+  gap: 10px;
+  padding: 0 0 var(--size-4-2);
+  margin-top: var(--size-4-2);
+}
+
+.cv-timeline__body--collapsed {
+  display: none;
+}
+
+/* Left rail: dot + vertical line */
+.cv-timeline__rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 14px;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.cv-timeline__dot {
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+  background: var(--background-primary);
+}
+
+.cv-timeline__dot svg {
+  width: 12px;
+  height: 12px;
+}
+
+.cv-timeline__dot--hidden {
+  visibility: hidden;
+}
+
+.cv-timeline__line {
+  width: 1px;
+  flex: 1;
+  min-height: 8px;
+  background: var(--background-modifier-border);
+}
+
+/* Content column */
+.cv-timeline__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  flex: 1;
+  min-width: 0;
+}
+
+/* Timeline items */
+.cv-timeline__item {
+  font-size: var(--font-ui-small);
+}
+
+/* Thinking text */
+.cv-timeline__thought {
+  color: var(--text-muted);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* "more" expand link */
+.cv-timeline__more {
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: var(--font-ui-smaller);
+}
+
+.cv-timeline__more:hover {
+  color: var(--text-muted);
+  text-decoration: underline;
+}
+
+/* Tool description row */
+.cv-timeline__tool {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  color: var(--text-muted);
+}
+
+.cv-timeline__tool-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: -26px;
+  margin-right: 0;
+  padding: 8px 0;
+  box-sizing: content-box;
+  color: var(--text-faint);
+  background: var(--background-primary);
+  flex-shrink: 0;
+}
+
+.cv-timeline__tool-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cv-timeline__tool-desc {
+  line-height: 1.3;
+}
+
+/* File pill */
+.cv-timeline__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--cv-surface);
+  border-radius: 100px;
+  padding: 4px 8px 4px 4px;
+  max-width: fit-content;
+}
+
+.cv-timeline__pill-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.cv-timeline__pill-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cv-timeline__pill-name {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Pill spinner (reading state) ───────────────────────────────────────── */
+
+.cv-timeline__pill-spinner {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.cv-timeline__pill-spinner .cv-dot {
+  width: 3px;
+  height: 3px;
+}
+
+/* ─── File group + collapse ─────────────────────────────────────────────── */
+
+.cv-file-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.cv-file-pills {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.cv-file-summary {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-ui-small);
+  color: var(--text-faint);
+  cursor: pointer;
+  user-select: none;
+}
+
+.cv-file-summary--visible {
+  display: inline-flex;
+}
+
+.cv-file-summary:hover {
+  color: var(--text-muted);
+}
+
+.cv-file-summary__chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  transition: transform 200ms ease;
+}
+
+.cv-file-summary__chevron svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cv-file-summary__chevron--open {
+  transform: rotate(90deg);
+}
+
+/* Inline summary sits inside the parent tool row */
+.cv-file-summary--inline {
+  margin-left: 4px;
+}
+
+/* Collapsed state: hide pills, show summary */
+.cv-file-group--collapsed .cv-file-pills {
+  display: none;
+}
+
+/* standalone summary fallback — inline ones use --visible class */
+.cv-file-group--collapsed > .cv-file-summary {
+  display: flex;
+}
+
+/* ─── Animated dots ──────────────────────────────────────────────────────── */
+
+.cv-dots {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.cv-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: cv-pulse 1.4s infinite ease-in-out;
+}
+
+.cv-dot:nth-child(1) { animation-delay: 0s; }
+.cv-dot:nth-child(2) { animation-delay: 0.2s; }
+.cv-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes cv-pulse {
+  0%, 80%, 100% { opacity: 0.3; }
+  40% { opacity: 1; }
+}
+
+/* ─── Shared card style ─────────────────────────────────────────────────── */
+
+.cv-card {
+  background: var(--cv-surface-bold);
+  border: 1px solid var(--cv-surface-bold-border);
+  border-radius: 12px;
+}
+
+/* ─── Permission prompt ──────────────────────────────────────────────────── */
+
+.cv-permission {
+  background: var(--cv-surface-bold);
+  border: 1px solid var(--cv-surface-bold-border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cv-permission__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cv-permission__icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+}
+
+.cv-permission__icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cv-permission__label {
+  font-size: var(--font-ui-medium);
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.cv-permission__detail {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.cv-permission__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.cv-permission__btn {
+  height: 32px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: none;
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.cv-permission__btn:hover {
+  opacity: 0.85;
+}
+
+.cv-permission__resolved {
+  font-size: var(--font-ui-small);
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* ─── Error ──────────────────────────────────────────────────────────────── */
+
+.cv-error {
+  background: var(--cv-surface-bold);
+  border: 1px solid var(--cv-surface-bold-border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.cv-error__icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.cv-error__icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ─── Question prompt (AskUserQuestion) ──────────────────────────────────── */
+
+.cv-question {
+  background: var(--cv-surface-bold);
+  border: 1px solid var(--cv-surface-bold-border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cv-question__group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cv-question__text {
+  font-size: var(--font-ui-medium);
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.cv-question__options {
+  display: flex;
+  flex-direction: column;
+}
+
+.cv-question__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.cv-question__option + .cv-question__option {
+  margin-top: 16px;
+}
+
+.cv-question__option:hover .cv-question__option-label {
+  color: var(--text-normal);
+}
+
+.cv-question__option--selected .cv-question__radio-icon {
+  color: var(--interactive-accent);
+}
+
+.cv-question__radio {
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.cv-question__radio-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-faint);
+}
+
+.cv-question__radio-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cv-question__option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cv-question__option-label {
+  font-size: var(--font-ui-small);
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.cv-question__option-desc {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.cv-question__submit {
+  align-self: flex-start;
+  height: 32px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: none;
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.cv-question__submit:hover {
+  opacity: 0.85;
+}
+
+.cv-question__submit:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.cv-question__resolved {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ─── Compact boundary ──────────────────────────────────────────────────── */
+
+.cv-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.cv-compact__line {
+  flex: 1;
+  height: 1px;
+  background: var(--background-modifier-border);
+}
+
+.cv-compact__center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cv-compact__icon {
+  width: 14px;
+  height: 14px;
+}
+
+.cv-compact__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ─── Input bar ──────────────────────────────────────────────────────────── */
+
+.cv-input-container {
+  padding: 0 var(--size-4-4) 18px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.cv-input-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--cv-surface);
+  border: 1px solid var(--cv-surface-border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* Row 1: textarea */
+.cv-input-row1 {
+  padding: 20px;
+}
+
+.cv-input-textarea {
+  width: 100%;
+  background: transparent !important;
+  border: none;
+  outline: none !important;
+  box-shadow: none !important;
+  resize: none;
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-medium);
+  color: var(--text-normal);
+  line-height: 1.4;
+  min-height: 18px;
+  max-height: 160px;
+  padding: 0;
+}
+
+.cv-input-textarea::placeholder {
+  color: var(--text-faint);
+}
+
+/* Row 2: actions */
+.cv-input-row2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 13px;
+}
+
+.cv-input-left {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+}
+
+.cv-input-right {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+/* Model selector button */
+.cv-model-btn {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 0 var(--size-4-2);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.cv-model-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.cv-model-btn__label {
+  font-size: var(--font-ui-small);
+}
+
+.cv-model-btn__chevron {
+  width: 16px;
+  height: 16px;
+}
+
+.cv-model-btn__chevron svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Send button */
+.cv-send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--background-modifier-hover);
+  border: none;
+  border-radius: var(--radius-m);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.cv-send-btn:hover {
+  color: var(--text-normal);
+}
+
+.cv-send-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.cv-send-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cv-stop-btn {
+  background: var(--text-faint) !important;
+}
+
+.cv-input--disabled .cv-input-card {
+  opacity: 0.6;
+}
+
+/* ─── Slash command picker ───────────────────────────────────────────────── */
+
+.cv-picker {
+  position: absolute;
+  bottom: 100%;
+  left: var(--size-4-4);
+  right: var(--size-4-4);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-l);
+  overflow: hidden;
+  z-index: 100;
+  margin-bottom: 4px;
+}
+
+.cv-picker-item {
+  padding: 7px 12px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-monospace);
+}
+
+.cv-picker-item:hover,
+.cv-picker-item--active {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* ─── Session modal ──────────────────────────────────────────────────────── */
+
+.cv-modal-title {
+  margin-bottom: 12px;
+  font-size: var(--font-ui-medium);
+  color: var(--text-normal);
+}
+
+.cv-modal-empty {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  padding: var(--size-4-2) 0;
+}
+
+.cv-session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.cv-session-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--size-4-2) 10px;
+  border-radius: var(--radius-m);
+  cursor: pointer;
+}
+
+.cv-session-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.cv-session-item__text {
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cv-session-item__meta {
+  display: flex;
+  gap: var(--size-4-2);
+  align-items: center;
+}
+
+.cv-session-item__date {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
+/* ─── Avatar group — no flexbox, pure calculated positions ───────────────── */
+
+.cv-avatar-group {
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+  overflow: hidden;
+  /* margin-top, height set inline + animated by motion.dev */
+}
+
+.cv-avatar {
+  position: absolute;
+  border-radius: 50%;
+  cursor: pointer;
+  /* left, top, width, height set inline + animated by motion.dev */
+}
+
+
+/* ─── Agent content panel (expands below bar) ────────────────────────────── */
+
+.cv-agent-content {
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+/* Top section: info + segment control */
+.cv-agent-top {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 16px 16px;
+}
+
+.cv-agent-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.cv-agent-name {
+  font-size: 20px;
+  color: var(--text-normal);
+  font-weight: 400;
+  text-align: center;
+  width: 100%;
+}
+
+.cv-agent-desc {
+  font-size: 15px;
+  color: var(--text-muted);
+  text-align: center;
+  width: 100%;
+}
+
+/* Segmented control — darker than header, no border */
+.cv-agent-segment {
+  display: flex;
+  background: var(--cv-agent-recessed);
+  border-radius: 10px;
+  padding: 3px;
+  width: 100%;
+}
+
+.cv-agent-segment__tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.cv-agent-segment__tab--active {
+  background: var(--cv-agent-pill);
+  color: var(--text-normal);
+}
+
+/* Bottom section: textarea + actions */
+.cv-agent-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 16px 16px;
+}
+
+.cv-agent-textarea {
+  height: 154px;
+  width: 100%;
+  background: var(--cv-agent-recessed) !important;
+  border: none !important;
+  border-radius: 16px;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 20px;
+  font-family: var(--font-interface);
+  font-size: 15px;
+  color: var(--text-normal);
+  resize: none;
+  line-height: 1.4;
+}
+
+.cv-agent-textarea::placeholder {
+  color: var(--text-faint);
+}
+
+.cv-agent-actions {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
+
+.cv-agent-btn {
+  flex: 1;
+  height: 32px;
+  background: var(--cv-agent-pill);
+  color: var(--text-normal);
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.cv-agent-btn:hover {
+  opacity: 0.85;
+}
+
+/* ─── Input dim ──────────────────────────────────────────────────────────── */
+
+.cv-input--dimmed .cv-input-card {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.cv-input-card {
+  transition: opacity 200ms ease;
+}
+
+/* ─── Voice button ───────────────────────────────────────────────────────── */
+
+.cv-voice-btn {
+  color: var(--text-faint);
+}
+
+.cv-voice-btn:hover {
+  color: var(--text-muted);
+}
+
