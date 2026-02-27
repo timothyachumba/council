@@ -2,6 +2,7 @@ import { setIcon } from "obsidian";
 import * as fs from "fs";
 import * as path from "path";
 import type { ClaudeModel } from "./types";
+import type { VoiceService } from "./VoiceService";
 
 const COMMANDS_PATH = path.join(
 	process.env.HOME ?? "/Users/timothyachumba",
@@ -27,6 +28,9 @@ export class InputBar {
 	private onModelChangeCallback: ((model: ClaudeModel) => void) | null = null;
 	private onStopCallback: (() => void) | null = null;
 	private currentModelIndex = 0;
+	private voiceService: VoiceService | null = null;
+	private voiceBtnEl!: HTMLElement;
+	private voiceAutoSend = true;
 
 	constructor(container: HTMLElement, initialModel: ClaudeModel) {
 		this.container = container;
@@ -70,8 +74,9 @@ export class InputBar {
 		const settingsBtn = right.createDiv({ cls: "clickable-icon cv-icon-btn" });
 		setIcon(settingsBtn, "sliders-horizontal");
 
-		const voiceBtn = right.createDiv({ cls: "clickable-icon cv-icon-btn cv-voice-btn" });
-		setIcon(voiceBtn, "mic");
+		this.voiceBtnEl = right.createDiv({ cls: "clickable-icon cv-icon-btn cv-voice-btn" });
+		setIcon(this.voiceBtnEl, "mic");
+		this.voiceBtnEl.addEventListener("click", () => this.handleVoiceToggle());
 
 		this.sendBtn = right.createEl("button", {
 			cls: "cv-send-btn",
@@ -209,7 +214,54 @@ export class InputBar {
 		this.closePicker();
 	}
 
+	// ─── Voice ────────────────────────────────────────────────────────────
+
+	private handleVoiceToggle(): void {
+		if (!this.voiceService) return;
+
+		if (this.voiceService.isRecording) {
+			this.voiceService.stopRecording();
+		} else {
+			void this.voiceService.startRecording();
+		}
+	}
+
 	// ─── Public API ───────────────────────────────────────────────────────
+
+	setVoiceService(service: VoiceService, autoSend: boolean): void {
+		this.voiceService = service;
+		this.voiceAutoSend = autoSend;
+
+		service.on("recording", () => {
+			this.voiceBtnEl.addClass("cv-voice-btn--recording");
+			setIcon(this.voiceBtnEl, "mic");
+		});
+
+		service.on("transcribing", () => {
+			this.voiceBtnEl.removeClass("cv-voice-btn--recording");
+			this.voiceBtnEl.addClass("cv-voice-btn--transcribing");
+			setIcon(this.voiceBtnEl, "loader");
+		});
+
+		service.on("transcribed", (text: string) => {
+			this.voiceBtnEl.removeClass("cv-voice-btn--transcribing");
+			setIcon(this.voiceBtnEl, "mic");
+
+			if (this.voiceAutoSend && this.onSendCallback) {
+				this.onSendCallback(text);
+			} else {
+				this.textarea.value += (this.textarea.value ? " " : "") + text;
+				this.autoResize();
+				this.textarea.focus();
+			}
+		});
+
+		service.on("error", () => {
+			this.voiceBtnEl.removeClass("cv-voice-btn--recording");
+			this.voiceBtnEl.removeClass("cv-voice-btn--transcribing");
+			setIcon(this.voiceBtnEl, "mic");
+		});
+	}
 
 	onSend(callback: (text: string) => void): void {
 		this.onSendCallback = callback;

@@ -171,6 +171,9 @@ export interface ClaudeVaultSettings {
 	effortLevel: "low" | "normal" | "high";
 	showThinkingTimeline: boolean;
 	agents: AgentConfig[];
+	agentSessions: Record<string, string | null>;
+	parakeetPath: string | null;
+	voiceAutoSend: boolean;
 }
 
 export const DEFAULT_AGENTS: AgentConfig[] = [
@@ -186,4 +189,7 @@ export const DEFAULT_SETTINGS: ClaudeVaultSettings = {
 	effortLevel: "normal",
 	showThinkingTimeline: false,
 	agents: DEFAULT_AGENTS,
+	agentSessions: {},
+	parakeetPath: null,
+	voiceAutoSend: true,
 };

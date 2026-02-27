@@ -220,6 +220,51 @@ export class MessageList {
 		this.questionHandlers.set(id, handler);
 	}
 
+	// ─── Agent threads ────────────────────────────────────────────────────
+
+	/** Create a thread container after the last user message */
+	createThread(): HTMLElement {
+		const el = this.container.createDiv({ cls: "cv-thread" });
+		this.scrollToBottom();
+		return el;
+	}
+
+	/** Append a new agent response slot inside a thread */
+	appendAgentResponse(
+		threadEl: HTMLElement,
+		agentId: string,
+		agentName: string,
+		agentColor: string,
+		assetResolver?: (path: string) => string,
+	): HTMLElement {
+		const response = threadEl.createDiv({ cls: "cv-thread__response" });
+
+		const badge = response.createDiv({ cls: "cv-thread__agent-badge" });
+		const avatar = badge.createDiv({ cls: "cv-thread__agent-avatar" });
+
+		if (assetResolver) {
+			const url = assetResolver(`assets/${agentId}.png`);
+			avatar.style.backgroundImage = `url("${url}")`;
+		} else {
+			avatar.style.background = agentColor;
+		}
+
+		const nameEl = badge.createDiv({ cls: "cv-thread__agent-name" });
+		nameEl.textContent = agentName;
+		nameEl.style.color = agentColor;
+
+		const textEl = response.createDiv({ cls: "cv-text" });
+		this.scrollToBottom();
+		return textEl;
+	}
+
+	/** Update the text content of an agent response */
+	updateAgentText(textEl: HTMLElement, content: string): void {
+		textEl.empty();
+		void MarkdownRenderer.renderMarkdown(content, textEl, "", this.component);
+		this.scrollToBottom();
+	}
+
 	// ─── Compact boundary ─────────────────────────────────────────────────
 
 	showCompactBoundary(): void {

@@ -4,28 +4,6 @@
   padding: 0;
 }
 
-/* ─── Custom surface tokens ─────────────────────────────────────────────── */
-/* Minimal theme can make --background-primary and --background-secondary
-   identical. We use color-mix to guarantee visible contrast in both modes. */
-
-.theme-light .cv-root {
-  --cv-surface: color-mix(in srgb, var(--background-primary) 96%, black);
-  --cv-surface-bold: color-mix(in srgb, var(--background-primary) 97%, white);
-  --cv-surface-border: color-mix(in srgb, var(--background-primary) 88%, black);
-  --cv-surface-bold-border: color-mix(in srgb, var(--background-primary) 92%, black);
-  --cv-agent-recessed: color-mix(in srgb, var(--background-secondary) 95%, black);
-  --cv-agent-pill: color-mix(in srgb, var(--background-secondary) 88%, black);
-}
-
-.theme-dark .cv-root {
-  --cv-surface: color-mix(in srgb, var(--background-primary) 95%, white);
-  --cv-surface-bold: color-mix(in srgb, var(--background-primary) 97%, black);
-  --cv-surface-border: color-mix(in srgb, var(--background-primary) 80%, white);
-  --cv-surface-bold-border: color-mix(in srgb, var(--background-primary) 90%, white);
-  --cv-agent-recessed: color-mix(in srgb, var(--background-secondary) 88%, black);
-  --cv-agent-pill: color-mix(in srgb, var(--background-secondary) 92%, white);
-}
-
 .cv-root {
   --cv-agent-edge:  #6366f1;
   --cv-agent-loom:  #22c55e;
@@ -36,9 +14,9 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  background: var(--background-primary);
   font-family: var(--font-interface);
   font-size: var(--font-ui-small);
+  padding:0 !important;
 }
 
 /* ─── Icon buttons (Obsidian native pattern) ─────────────────────────────── */
@@ -50,7 +28,7 @@
   width: 32px;
   height: 32px;
   padding: 7px;
-  border-radius: var(--radius-s);
+  border-radius: var(--clickable-icon-radius, var(--radius-s));
   color: var(--icon-color);
   cursor: pointer;
 }
@@ -60,8 +38,6 @@
 .cv-header {
   display: flex;
   flex-direction: column;
-  border-bottom: 1px solid var(--background-modifier-border);
-  background: var(--background-secondary);
   flex-shrink: 0;
 }
 
@@ -70,9 +46,12 @@
   align-items: center;
   justify-content: space-between;
   height: 48px;
-  padding: 0 var(--size-4-2);
   position: relative;
   z-index: 1;
+}
+
+.cv-header__bar > .cv-icon-btn {
+  visibility: hidden;
 }
 
 .cv-header__spacer {
@@ -102,14 +81,15 @@
 }
 
 .cv-message--user .cv-bubble {
-  background: var(--cv-surface);
+  background: var(--interactive-normal);
   color: var(--text-normal);
-  border-radius: 16px;
+  border-radius: var(--radius-l);
   padding: 12px;
   max-width: 80%;
   font-size: var(--font-ui-medium);
   line-height: 1.4;
   word-break: break-word;
+  box-shadow: var(--input-shadow);
 }
 
 /* ─── Assistant text ─────────────────────────────────────────────────────── */
@@ -187,13 +167,13 @@
 
 .cv-text pre {
   background: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-m);
   padding: 10px 12px;
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;
   margin: var(--size-4-2) 0;
+  box-shadow: var(--input-shadow);
 }
 
 /* ─── Thinking timeline ──────────────────────────────────────────────────── */
@@ -363,10 +343,11 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: var(--cv-surface);
-  border-radius: 100px;
+  background: var(--interactive-normal);
+  border-radius: var(--button-radius);
   padding: 4px 8px 4px 4px;
   max-width: fit-content;
+  box-shadow: var(--input-shadow);
 }
 
 .cv-timeline__pill-icon {
@@ -498,17 +479,17 @@
 /* ─── Shared card style ─────────────────────────────────────────────────── */
 
 .cv-card {
-  background: var(--cv-surface-bold);
-  border: 1px solid var(--cv-surface-bold-border);
-  border-radius: 12px;
+  background: var(--interactive-normal);
+  border-radius: var(--radius-m);
+  box-shadow: var(--input-shadow);
 }
 
 /* ─── Permission prompt ──────────────────────────────────────────────────── */
 
 .cv-permission {
-  background: var(--cv-surface-bold);
-  border: 1px solid var(--cv-surface-bold-border);
-  border-radius: 12px;
+  background: var(--interactive-normal);
+  border-radius: var(--radius-m);
+  box-shadow: var(--input-shadow);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -551,7 +532,7 @@
 .cv-permission__btn {
   height: 32px;
   padding: 7px 8px;
-  border-radius: 8px;
+  border-radius: var(--button-radius);
   border: none;
   background: var(--background-modifier-hover);
   color: var(--text-normal);
@@ -572,9 +553,9 @@
 /* ─── Error ──────────────────────────────────────────────────────────────── */
 
 .cv-error {
-  background: var(--cv-surface-bold);
-  border: 1px solid var(--cv-surface-bold-border);
-  border-radius: 12px;
+  background: var(--interactive-normal);
+  border-radius: var(--radius-m);
+  box-shadow: var(--input-shadow);
   padding: 12px;
   display: flex;
   align-items: center;
@@ -598,9 +579,9 @@
 /* ─── Question prompt (AskUserQuestion) ──────────────────────────────────── */
 
 .cv-question {
-  background: var(--cv-surface-bold);
-  border: 1px solid var(--cv-surface-bold-border);
-  border-radius: 12px;
+  background: var(--interactive-normal);
+  border-radius: var(--radius-m);
+  box-shadow: var(--input-shadow);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -682,7 +663,7 @@
   align-self: flex-start;
   height: 32px;
   padding: 7px 8px;
-  border-radius: 8px;
+  border-radius: var(--button-radius);
   border: none;
   background: var(--background-modifier-hover);
   color: var(--text-normal);
@@ -750,10 +731,11 @@
 .cv-input-card {
   display: flex;
   flex-direction: column;
-  background: var(--cv-surface);
-  border: 1px solid var(--cv-surface-border);
-  border-radius: 16px;
+  background: var(--interactive-normal);
+  border-radius: var(--input-radius);
+  box-shadow: var(--input-shadow);
   overflow: hidden;
+  
 }
 
 /* Row 1: textarea */
@@ -775,7 +757,10 @@
   min-height: 18px;
   max-height: 160px;
   padding: 0;
+  
+  
 }
+
 
 .cv-input-textarea::placeholder {
   color: var(--text-faint);
@@ -808,7 +793,7 @@
   gap: 2px;
   height: 32px;
   padding: 0 var(--size-4-2);
-  border-radius: var(--radius-s);
+  border-radius: var(--button-radius);
   cursor: pointer;
   color: var(--text-muted);
 }
@@ -841,7 +826,7 @@
   padding: 0;
   background: var(--background-modifier-hover);
   border: none;
-  border-radius: var(--radius-m);
+  border-radius: var(--button-radius);
   color: var(--text-muted);
   cursor: pointer;
 }
@@ -876,7 +861,6 @@
   left: var(--size-4-4);
   right: var(--size-4-4);
   background: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-m);
   box-shadow: var(--shadow-l);
   overflow: hidden;
@@ -958,7 +942,7 @@
   position: relative;
   z-index: 2;
   cursor: pointer;
-  overflow: hidden;
+  overflow: visible;
   /* margin-top, height set inline + animated by motion.dev */
 }
 
@@ -966,6 +950,9 @@
   position: absolute;
   border-radius: 50%;
   cursor: pointer;
+  transform: scale(1);
+  box-shadow: 0 0 0 2px var(--workspace-background);
+  transition: filter var(--anim-duration-moderate) var(--anim-motion-baseline);
   /* left, top, width, height set inline + animated by motion.dev */
 }
 
@@ -976,6 +963,7 @@
   height: 0;
   opacity: 0;
   overflow: hidden;
+  border-bottom: 1px solid var(--background-modifier-border);
 }
 
 /* Top section: info + segment control */
@@ -983,7 +971,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 0 16px 16px;
+  padding: 0 16px 24px;
 }
 
 .cv-agent-info {
@@ -1008,31 +996,54 @@
   width: 100%;
 }
 
-/* Segmented control — darker than header, no border */
+/* Segmented control — matches Baseline floating tab style */
 .cv-agent-segment {
   display: flex;
-  background: var(--cv-agent-recessed);
-  border-radius: 10px;
-  padding: 3px;
-  width: 100%;
-}
+  padding: 2px;
+  margin: 0 auto;
+  width: 70%;
+  background: var(--background-primary);
+  border-radius: 100vh;
+} 
 
 .cv-agent-segment__tab {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 30px;
-  border-radius: 8px;
+  height: 32px;
+  border-radius: 100vh;
   font-size: 13px;
   color: var(--text-muted);
   cursor: pointer;
   user-select: none;
+  background: transparent;
+  opacity: 0.5;
+  transition: opacity var(--anim-duration-moderate) var(--anim-motion-baseline),
+              filter var(--anim-duration-moderate) var(--anim-motion-baseline),
+              background-color 0s;
+}
+
+.cv-agent-segment__tab:hover {
+  background: var(--interactive-normal);
+  box-shadow: var(--input-shadow);
+  opacity: 1;
 }
 
 .cv-agent-segment__tab--active {
-  background: var(--cv-agent-pill);
+  background: var(--background-modifier-hover);
   color: var(--text-normal);
+  opacity: 1;
+}
+
+.cv-agent-segment__tab--active:hover {
+  background: var(--background-modifier-hover);
+
+}
+
+.cv-agent-segment__tab:active svg {
+  scale: 0.75;
+  opacity: 0.75;
 }
 
 /* Bottom section: textarea + actions */
@@ -1046,12 +1057,12 @@
 .cv-agent-textarea {
   height: 154px;
   width: 100%;
-  background: var(--cv-agent-recessed) !important;
+  background: var(--background-primary) !important;
   border: none !important;
-  border-radius: 16px;
+  border-radius: var(--input-radius);
   outline: none !important;
   box-shadow: none !important;
-  padding: 20px;
+  padding: 16px;
   font-family: var(--font-interface);
   font-size: 15px;
   color: var(--text-normal);
@@ -1072,12 +1083,13 @@
 .cv-agent-btn {
   flex: 1;
   height: 32px;
-  background: var(--cv-agent-pill);
+  background: var(--interactive-normal);
   color: var(--text-normal);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--button-radius);
   font-size: 15px;
   cursor: pointer;
+  box-shadow: var(--input-shadow);
 }
 
 .cv-agent-btn:hover {
@@ -1105,3 +1117,54 @@
   color: var(--text-muted);
 }
 
+.cv-voice-btn--recording {
+  color: var(--color-red) !important;
+  animation: cv-voice-pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes cv-voice-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.cv-voice-btn--transcribing {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* ─── Agent thread UI ────────────────────────────────────────────────────── */
+
+.cv-thread {
+  margin-left: 16px;
+  border-left: 2px solid var(--background-modifier-border);
+  padding-left: 12px;
+}
+
+.cv-thread__response {
+  margin-top: 12px;
+}
+
+.cv-thread__response:first-child {
+  margin-top: 0;
+}
+
+.cv-thread__agent-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cv-thread__agent-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.cv-thread__agent-name {
+  font-size: 13px;
+  font-weight: 500;
+}

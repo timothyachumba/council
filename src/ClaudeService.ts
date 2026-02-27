@@ -25,7 +25,7 @@ export class ClaudeService extends EventEmitter {
 	 * Send a message to Claude. Spawns a new claude --print process.
 	 * If sessionId is provided, resumes that session; otherwise starts a new one.
 	 */
-	send(message: string, model: ClaudeModel, sessionId: string | null): void {
+	send(message: string, model: ClaudeModel, sessionId: string | null, systemPrompt?: string): void {
 		// Kill any existing process
 		this.abort();
 
@@ -40,6 +40,10 @@ export class ClaudeService extends EventEmitter {
 
 		if (sessionId) {
 			args.push("--resume", sessionId);
+		}
+
+		if (systemPrompt) {
+			args.push("--append-system-prompt", systemPrompt);
 		}
 
 		args.push(message);

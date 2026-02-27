@@ -4,6 +4,8 @@ import { MessageList } from "./MessageList";
 import { InputBar } from "./InputBar";
 import { AgentPanel } from "./AgentPanel";
 import { SessionStore } from "./SessionStore";
+import { VoiceService } from "./VoiceService";
+import { AgentOrchestrator } from "./AgentOrchestrator";
 import type {
 	ClaudeVaultSettings,
 	ClaudeModel,
@@ -34,6 +36,11 @@ export class ChatView extends ItemView {
 	private agentPanel!: AgentPanel;
 	private headerEl!: HTMLElement;
 
+	// Services
+	private voiceService!: VoiceService;
+	private orchestrator!: AgentOrchestrator;
+	private assetResolver!: (path: string) => string;
+
 	// State
 	private currentSessionId: string | null;
 
@@ -62,14 +69,26 @@ export class ChatView extends ItemView {
 		root.addClass("cv-root");
 
 		const pluginDir = ".obsidian/plugins/claude-vault";
-		const resolver = (path: string) =>
+		this.assetResolver = (path: string) =>
 			this.app.vault.adapter.getResourcePath(`${pluginDir}/${path}`);
 
 		this.agentPanel = new AgentPanel(this.settings.agents, (agents) => {
 			this.settings.agents = agents;
 			void this.saveSettings();
-		}, resolver);
+		}, this.assetResolver);
 		this.agentPanel.onStateChange((open) => this.inputBar.setDimmed(open));
+
+		// Voice service
+		this.voiceService = new VoiceService(this.settings.parakeetPath);
+
+		// Agent orchestrator
+		this.orchestrator = new AgentOrchestrator(
+			this.settings.agentSessions,
+			(agentId, sessionId) => {
+				this.settings.agentSessions[agentId] = sessionId;
+				void this.saveSettings();
+			},
+		);
 
 		this.buildHeader(root);
 		this.buildMessages(root);
@@ -89,6 +108,7 @@ export class ChatView extends ItemView {
 
 	async onClose(): Promise<void> {
 		this.claude.abort();
+		this.orchestrator.abort();
 	}
 
 	// ─── Layout ──────────────────────────────────────────────────────────
@@ -124,6 +144,7 @@ export class ChatView extends ItemView {
 	private buildInput(root: HTMLElement): void {
 		const container = root.createDiv({ cls: "cv-input-container" });
 		this.inputBar = new InputBar(container, this.settings.model);
+		this.inputBar.setVoiceService(this.voiceService, this.settings.voiceAutoSend);
 		this.inputBar.onSend((text) => this.handleSend(text));
 		this.inputBar.onModelChange((model) => {
 			this.settings.model = model;
@@ -132,17 +153,95 @@ export class ChatView extends ItemView {
 		});
 		this.inputBar.onStop(() => {
 			this.claude.abort();
+			this.orchestrator.abort();
 		});
 	}
 
 	// ─── Send / receive ──────────────────────────────────────────────────
 
 	private handleSend(text: string): void {
-		if (this.claude.isActive()) return;
+		if (this.claude.isActive() || this.orchestrator.isActive()) return;
 
 		this.messageList.appendUserMessage(text);
 		this.inputBar.setEnabled(false);
 
+		const hasWatching = this.settings.agents.some((a) => a.state === "watching");
+		const hasDirectMention = /@(\w+)/i.test(text);
+
+		if (hasWatching || hasDirectMention) {
+			this.handleAgentPipeline(text);
+		} else {
+			this.handleDirectChat(text);
+		}
+	}
+
+	private handleAgentPipeline(text: string): void {
+		const threadEl = this.messageList.createThread();
+
+		// Track per-agent text elements
+		const agentTextEls = new Map<string, HTMLElement>();
+		const agentTextContent = new Map<string, string>();
+
+		this.orchestrator.on("agent-event", ({ agentId, agentName, agentColor, event }) => {
+			switch (event.type) {
+				case "text_delta": {
+					if (!agentTextEls.has(agentId)) {
+						const el = this.messageList.appendAgentResponse(
+							threadEl, agentId, agentName, agentColor, this.assetResolver,
+						);
+						agentTextEls.set(agentId, el);
+						agentTextContent.set(agentId, "");
+					}
+					const prev = agentTextContent.get(agentId) ?? "";
+					const updated = prev + event.delta;
+					agentTextContent.set(agentId, updated);
+					this.messageList.updateAgentText(agentTextEls.get(agentId)!, updated);
+					break;
+				}
+
+				case "text_full": {
+					if (!agentTextEls.has(agentId)) {
+						const el = this.messageList.appendAgentResponse(
+							threadEl, agentId, agentName, agentColor, this.assetResolver,
+						);
+						agentTextEls.set(agentId, el);
+					}
+					agentTextContent.set(agentId, event.text);
+					this.messageList.updateAgentText(agentTextEls.get(agentId)!, event.text);
+					break;
+				}
+
+				case "permission_prompt": {
+					const block: PermissionBlock = {
+						kind: "permission",
+						id: event.id,
+						toolName: event.toolName,
+						input: event.input,
+					};
+					this.messageList.renderPermission(block);
+					this.messageList.onPermission(event.id, (answer) => {
+						this.orchestrator.respond(agentId, answer);
+					});
+					break;
+				}
+
+				case "error": {
+					this.messageList.showError(`${agentName}: ${event.message}`);
+					break;
+				}
+			}
+		});
+
+		this.orchestrator.once("all-done", () => {
+			this.orchestrator.removeAllListeners("agent-event");
+			this.inputBar.setEnabled(true);
+			this.inputBar.focus();
+		});
+
+		void this.orchestrator.processMessage(text, this.settings.agents, this.settings.model);
+	}
+
+	private handleDirectChat(text: string): void {
 		let textEl: HTMLElement | null = null;
 		let textContent = "";
 
@@ -167,8 +266,6 @@ export class ChatView extends ItemView {
 				}
 
 				case "tool_use": {
-					// Summarize any pending thinking before moving on
-	
 					// New tool after text means a new response segment
 					textEl = null;
 					textContent = "";

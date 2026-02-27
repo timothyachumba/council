@@ -10,7 +10,7 @@ const LG = 64;        // open avatar size (inactive)
 const LG_ACTIVE = 72; // open avatar size (active — slightly larger)
 const LG_GAP = 24;    // open gap between avatars
 const BAR_H = 48;     // header bar height
-const OPEN_H = LG_ACTIVE + 24; // open group height
+const OPEN_H = LG_ACTIVE - 16; // open group height
 
 const SPRING = { type: "spring" as const, stiffness: 400, damping: 35 };
 const SPRING_FAST = { type: "spring" as const, stiffness: 500, damping: 40 };
@@ -60,10 +60,10 @@ function openAvatarX(i: number, activeIndex: number, containerW: number): number
 	}
 }
 
-/** Y position — vertically centered in OPEN_H */
+/** Y position — vertically centered in OPEN_H, shifted up */
 function openAvatarY(i: number, activeIndex: number): number {
 	const size = openAvatarSize(i, activeIndex);
-	return (OPEN_H - size) / 2;
+	return (OPEN_H - size) / 2 - 24;
 }
 
 function closedAvatarY(): number {
@@ -111,6 +111,7 @@ export class AgentPanel {
 		// Content panel
 		this.contentEl = createDiv({ cls: "cv-agent-content" });
 		this.buildContent();
+		this.syncAvatarFilters();
 
 		// Watch for container resize
 		this.resizeObserver = new ResizeObserver((entries) => {
@@ -181,10 +182,12 @@ export class AgentPanel {
 		this.stillTab.addEventListener("click", () => {
 			this.drafts[this.currentIndex].state = "still";
 			this.updateSegment("still");
+			this.avatarEls[this.currentIndex].style.filter = "grayscale(1)";
 		});
 		this.watchingTab.addEventListener("click", () => {
 			this.drafts[this.currentIndex].state = "watching";
 			this.updateSegment("watching");
+			this.avatarEls[this.currentIndex].style.filter = "";
 		});
 
 		const bottom = this.contentEl.createDiv({ cls: "cv-agent-bottom" });
@@ -202,6 +205,7 @@ export class AgentPanel {
 		const cancelBtn = actions.createEl("button", { cls: "cv-agent-btn", text: "Cancel" });
 		cancelBtn.addEventListener("click", () => {
 			this.resetDrafts();
+			this.syncAvatarFilters();
 			this.close();
 		});
 
@@ -212,6 +216,7 @@ export class AgentPanel {
 				this.agents[i].prompt = this.drafts[i].prompt;
 			}
 			this.onSaveCallback(this.agents);
+			this.syncAvatarFilters();
 			this.close();
 		});
 	}
@@ -244,6 +249,7 @@ export class AgentPanel {
 					top: `${closedAvatarY()}px`,
 					width: `${SM}px`,
 					height: `${SM}px`,
+					scale: 1,
 				};
 				if (animated) {
 					animate(el, target, SPRING);
@@ -270,6 +276,13 @@ export class AgentPanel {
 
 	private resetDrafts(): void {
 		this.drafts = this.agents.map((a) => ({ ...a }));
+	}
+
+	/** Apply greyscale filter to avatars of agents in "still" state */
+	private syncAvatarFilters(): void {
+		for (let i = 0; i < this.agents.length; i++) {
+			this.avatarEls[i].style.filter = this.agents[i].state === "still" ? "grayscale(1)" : "";
+		}
 	}
 
 	private updateSegment(state: AgentState): void {
