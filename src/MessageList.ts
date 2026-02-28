@@ -1,64 +1,90 @@
 import { MarkdownRenderer, Component, setIcon } from "obsidian";
-import { ThinkingTimeline } from "./ThinkingTimeline";
-import type { ToolUseBlock, PermissionBlock, QuestionBlock } from "./types";
+import type { PermissionBlock, QuestionBlock } from "./types";
+
+const AGENT_THINKING_ACTIONS: Record<string, string[]> = {
+	edge: ["is considering...", "is challenging assumptions...", "is finding counterpoints..."],
+	loom: ["is thinking...", "is finding connections...", "is weaving context..."],
+	ember: ["is exploring...", "is extending the idea...", "is shaping a response..."],
+	quill: ["is composing...", "is finding the words...", "is drafting a response..."],
+};
+
+const THINKING_CYCLE_MS = 3000;
 
 export class MessageList {
 	private container: HTMLElement;
 	private component: Component;
 	private permissionHandlers = new Map<string, (answer: "y" | "n") => void>();
-	private activeTimeline: ThinkingTimeline | null = null;
+	private replyCallback: ((agentId: string, agentName: string) => void) | null = null;
+	private assetResolver: ((path: string) => string) | null = null;
+	private activeThread: HTMLElement | null = null;
 
-	constructor(container: HTMLElement, component: Component) {
+	constructor(container: HTMLElement, component: Component, assetResolver?: (path: string) => string) {
 		this.container = container;
 		this.component = component;
+		this.assetResolver = assetResolver ?? null;
 	}
 
-	// ─── User messages ─────────────────────────────────────────────────────
+	/** Returns the active thread container, or the top-level container if no thread is open */
+	private get target(): HTMLElement {
+		return this.activeThread ?? this.container;
+	}
 
+	// ─── User messages (plain text, no bubble) ────────────────────────────
+
+	/** Append a user message. Top-level messages close any active thread. */
 	appendUserMessage(text: string): void {
-		const el = this.container.createDiv({ cls: "cv-message cv-message--user" });
-		el.createDiv({ cls: "cv-bubble", text });
-		this.scrollToBottom();
-	}
+		// If we're in a thread, the message goes inside it
+		// If not, it's a new top-level thought (and closes any thread)
+		const parent = this.target;
+		const el = parent.createDiv({ cls: "cv-message cv-message--user" });
 
-	// ─── Thinking timeline ─────────────────────────────────────────────────
+		// Render @mentions with agent avatar clipping mask
+		const mentionRe = /@(\w+)/g;
+		let lastIndex = 0;
+		let match: RegExpExecArray | null;
+		const textEl = el.createDiv({ cls: "cv-text" });
+		let hasMention = false;
 
-	/** Create or return the active thinking timeline */
-	ensureTimeline(): ThinkingTimeline {
-		if (!this.activeTimeline) {
-			this.activeTimeline = new ThinkingTimeline(this.container);
-			this.scrollToBottom();
+		while ((match = mentionRe.exec(text)) !== null) {
+			hasMention = true;
+			if (match.index > lastIndex) {
+				textEl.appendText(text.slice(lastIndex, match.index));
+			}
+			const name = match[1];
+			const agentId = name.toLowerCase();
+			const mentionSpan = textEl.createSpan({ cls: "cv-mention", text: `@${name}` });
+			if (this.assetResolver) {
+				const url = this.assetResolver(`assets/${agentId}.png`);
+				mentionSpan.style.backgroundImage = `url("${url}")`;
+			}
+			lastIndex = match.index + match[0].length;
 		}
-		return this.activeTimeline;
-	}
 
-	addThinkingText(text: string): void {
-		this.ensureTimeline().addThinking(text);
+		if (hasMention && lastIndex < text.length) {
+			textEl.appendText(text.slice(lastIndex));
+		} else if (!hasMention) {
+			textEl.textContent = text;
+		}
+
 		this.scrollToBottom();
 	}
 
-	updateThinkingText(text: string): void {
-		this.ensureTimeline().updateThinking(text);
-		this.scrollToBottom();
+	/** Post a new top-level thought — closes any active thread */
+	appendTopLevelMessage(text: string): void {
+		this.activeThread = null;
+		this.appendUserMessage(text);
 	}
 
-	addToolToTimeline(block: ToolUseBlock): void {
-		this.ensureTimeline().addTool(block);
-		this.scrollToBottom();
+	/** Ensure a thread container exists. Creates one with the curved connector if needed. */
+	private ensureThread(): HTMLElement {
+		if (!this.activeThread) {
+			this.activeThread = this.container.createDiv({ cls: "cv-thread" });
+			this.activeThread.createDiv({ cls: "cv-thread__connector" });
+		}
+		return this.activeThread;
 	}
 
-
-	updateToolResult(toolUseId: string, content: string, isError: boolean): void {
-		this.activeTimeline?.updateToolResult(toolUseId, content, isError);
-	}
-
-	completeTimeline(): void {
-		if (!this.activeTimeline) return;
-		this.activeTimeline.complete();
-		this.activeTimeline = null;
-	}
-
-	// ─── Assistant text (renders below the timeline) ───────────────────────
+	// ─── Assistant text ───────────────────────────────────────────────────
 
 	appendAssistantText(content: string): HTMLElement {
 		const el = this.container.createDiv({ cls: "cv-message cv-message--assistant" });
@@ -72,6 +98,125 @@ export class MessageList {
 		el.empty();
 		void MarkdownRenderer.renderMarkdown(content, el, "", this.component);
 		this.scrollToBottom();
+	}
+
+	// ─── Agent thinking label ─────────────────────────────────────────────
+
+	showAgentThinking(
+		agentId: string,
+		agentName: string,
+		agentColor: string,
+		assetResolver?: (path: string) => string,
+	): HTMLElement {
+		const thread = this.ensureThread();
+		const el = thread.createDiv({ cls: "cv-agent-thinking" });
+
+		const avatar = el.createDiv({ cls: "cv-agent-thinking__avatar" });
+		if (assetResolver) {
+			const url = assetResolver(`assets/${agentId}.png`);
+			avatar.style.backgroundImage = `url("${url}")`;
+		} else {
+			avatar.style.background = agentColor;
+		}
+
+		const actions = AGENT_THINKING_ACTIONS[agentId] ?? ["is thinking..."];
+		const labelEl = el.createDiv({ cls: "cv-agent-thinking__label" });
+		labelEl.createSpan({ cls: "cv-agent-thinking__name", text: agentName + " " });
+		const actionEl = labelEl.createSpan({ cls: "cv-agent-thinking__action" });
+
+		// Stream in action text character by character
+		let actionIndex = 0;
+		let charIndex = 0;
+		let charInterval: ReturnType<typeof setInterval> | null = null;
+
+		const streamAction = (text: string) => {
+			actionEl.textContent = "";
+			charIndex = 0;
+			if (charInterval) clearInterval(charInterval);
+			charInterval = setInterval(() => {
+				if (charIndex < text.length) {
+					actionEl.textContent = text.slice(0, charIndex + 1);
+					charIndex++;
+				} else {
+					if (charInterval) clearInterval(charInterval);
+					charInterval = null;
+				}
+			}, 30);
+		};
+
+		streamAction(actions[0]);
+
+		// Cycle through actions
+		const interval = setInterval(() => {
+			actionIndex = (actionIndex + 1) % actions.length;
+			streamAction(actions[actionIndex]);
+		}, THINKING_CYCLE_MS);
+
+		// Store cleanup function on element
+		(el as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
+			clearInterval(interval);
+			if (charInterval) clearInterval(charInterval);
+		};
+
+		this.scrollToBottom();
+		return el;
+	}
+
+	/** Remove a thinking label and clean up its intervals */
+	removeAgentThinking(el: HTMLElement): void {
+		(el as HTMLElement & { _cleanup?: () => void })._cleanup?.();
+		el.remove();
+	}
+
+	// ─── Agent response cards ─────────────────────────────────────────────
+
+	/** Create an agent card inside the active thread. */
+	appendAgentCard(
+		agentId: string,
+		agentName: string,
+		agentColor: string,
+		content: string,
+		assetResolver?: (path: string) => string,
+	): HTMLElement {
+		const thread = this.ensureThread();
+		const card = thread.createDiv({ cls: "cv-agent-card" });
+
+		const body = card.createDiv({ cls: "cv-agent-card__body" });
+		const textEl = body.createDiv({ cls: "cv-text" });
+		if (content) {
+			void MarkdownRenderer.renderMarkdown(content, textEl, "", this.component);
+		}
+
+		const footer = card.createDiv({ cls: "cv-agent-card__footer" });
+
+		const identity = footer.createDiv({ cls: "cv-agent-card__identity" });
+		const avatar = identity.createDiv({ cls: "cv-agent-card__avatar" });
+		if (assetResolver) {
+			const url = assetResolver(`assets/${agentId}.png`);
+			avatar.style.backgroundImage = `url("${url}")`;
+		} else {
+			avatar.style.background = agentColor;
+		}
+		identity.createDiv({ cls: "cv-agent-card__name", text: agentName });
+
+		const replyBtn = footer.createDiv({ cls: "cv-agent-card__action", text: "Reply" });
+		replyBtn.addEventListener("click", () => {
+			this.replyCallback?.(agentId, agentName);
+		});
+
+		this.scrollToBottom();
+		return textEl;
+	}
+
+	/** Update the streamed text content of an agent card */
+	updateAgentCardText(textEl: HTMLElement, content: string): void {
+		textEl.empty();
+		void MarkdownRenderer.renderMarkdown(content, textEl, "", this.component);
+		this.scrollToBottom();
+	}
+
+	onReply(callback: (agentId: string, agentName: string) => void): void {
+		this.replyCallback = callback;
 	}
 
 	// ─── Permission prompts ────────────────────────────────────────────────
@@ -98,11 +243,11 @@ export class MessageList {
 		if (!block.resolved) {
 			const actions = card.createDiv({ cls: "cv-permission__actions" });
 			const approveBtn = actions.createEl("button", {
-				cls: "cv-permission__btn",
+				cls: "cv-btn cv-permission__btn",
 				text: "Allow",
 			});
 			const denyBtn = actions.createEl("button", {
-				cls: "cv-permission__btn",
+				cls: "cv-btn cv-permission__btn",
 				text: "Deny",
 			});
 
@@ -144,7 +289,6 @@ export class MessageList {
 			const optionsEl = questionEl.createDiv({ cls: "cv-question__options" });
 
 			if (block.resolved) {
-				// Already answered — show resolved state
 				const answer = block.resolved[q.question];
 				const resolved = optionsEl.createDiv({ cls: "cv-question__resolved" });
 				resolved.createSpan({ text: answer ?? "No answer" });
@@ -176,7 +320,6 @@ export class MessageList {
 							}
 							updateSubmit();
 						} else {
-							// Single select — clear others
 							optionsEl.querySelectorAll(".cv-question__option").forEach((el) => {
 								el.removeClass("cv-question__option--selected");
 								const icon = el.querySelector(".cv-question__radio-icon");
@@ -190,9 +333,8 @@ export class MessageList {
 					});
 				}
 
-				// Submit button — disabled until something is selected
 				const submit = questionEl.createEl("button", {
-					cls: "cv-question__submit",
+					cls: "cv-btn cv-question__submit",
 					text: "Submit",
 					attr: { disabled: "" },
 				});
@@ -203,7 +345,6 @@ export class MessageList {
 					const handler = this.questionHandlers.get(block.id);
 					if (handler) handler({ [q.question]: answer });
 
-					// Replace options with resolved state
 					optionsEl.empty();
 					const resolved = optionsEl.createDiv({ cls: "cv-question__resolved" });
 					resolved.createSpan({ text: answer });
@@ -218,51 +359,6 @@ export class MessageList {
 
 	onQuestion(id: string, handler: (answers: Record<string, string>) => void): void {
 		this.questionHandlers.set(id, handler);
-	}
-
-	// ─── Agent threads ────────────────────────────────────────────────────
-
-	/** Create a thread container after the last user message */
-	createThread(): HTMLElement {
-		const el = this.container.createDiv({ cls: "cv-thread" });
-		this.scrollToBottom();
-		return el;
-	}
-
-	/** Append a new agent response slot inside a thread */
-	appendAgentResponse(
-		threadEl: HTMLElement,
-		agentId: string,
-		agentName: string,
-		agentColor: string,
-		assetResolver?: (path: string) => string,
-	): HTMLElement {
-		const response = threadEl.createDiv({ cls: "cv-thread__response" });
-
-		const badge = response.createDiv({ cls: "cv-thread__agent-badge" });
-		const avatar = badge.createDiv({ cls: "cv-thread__agent-avatar" });
-
-		if (assetResolver) {
-			const url = assetResolver(`assets/${agentId}.png`);
-			avatar.style.backgroundImage = `url("${url}")`;
-		} else {
-			avatar.style.background = agentColor;
-		}
-
-		const nameEl = badge.createDiv({ cls: "cv-thread__agent-name" });
-		nameEl.textContent = agentName;
-		nameEl.style.color = agentColor;
-
-		const textEl = response.createDiv({ cls: "cv-text" });
-		this.scrollToBottom();
-		return textEl;
-	}
-
-	/** Update the text content of an agent response */
-	updateAgentText(textEl: HTMLElement, content: string): void {
-		textEl.empty();
-		void MarkdownRenderer.renderMarkdown(content, textEl, "", this.component);
-		this.scrollToBottom();
 	}
 
 	// ─── Compact boundary ─────────────────────────────────────────────────
@@ -291,166 +387,8 @@ export class MessageList {
 	// ─── Utilities ─────────────────────────────────────────────────────────
 
 	clear(): void {
-		this.activeTimeline?.destroy();
-		this.activeTimeline = null;
 		this.container.empty();
 		this.permissionHandlers.clear();
-	}
-
-	/** Render demo UI for styling — shows all states of the thinking timeline */
-	renderDemo(): void {
-		// User message
-		this.appendUserMessage("Can you read the main config file and update the theme?");
-
-		// Active thinking timeline (in-progress)
-		const active = this.ensureTimeline();
-		active.addThinking("I need to find the config file first. Let me check the project structure to understand where configuration lives.");
-		active.addTool({
-			kind: "tool_use",
-			id: "demo-1",
-			name: "Read",
-			input: { file_path: "/src/config.ts" },
-		});
-		active.addTool({
-			kind: "tool_use",
-			id: "demo-2",
-			name: "Glob",
-			input: { pattern: "**/*.config.*" },
-		});
-		active.addThinking("Found it. Now let me read the theme settings and update the values.");
-		active.addTool({
-			kind: "tool_use",
-			id: "demo-3",
-			name: "Edit",
-			input: { file_path: "/src/theme.ts" },
-		});
-		active.addTool({
-			kind: "tool_use",
-			id: "demo-4",
-			name: "Bash",
-			input: { command: "npm run build", description: "Build the project" },
-		});
-
-		// Complete it — but leave expanded for styling
-		this.completeTimeline();
-		// Re-expand so we can see the content for styling
-		const completedBody = this.container.querySelector(".cv-timeline__body--collapsed");
-		if (completedBody) {
-			completedBody.removeClass("cv-timeline__body--collapsed");
-		}
-
-		// Assistant response — comprehensive markdown
-		this.appendAssistantText([
-			"I've updated the theme configuration. Here's a summary of the changes:",
-			"",
-			"## What changed",
-			"",
-			"The **primary palette** was updated and `border-radius` values were adjusted. The ~~old colours~~ have been replaced with *new semantic tokens*.",
-			"",
-			"### Unordered list",
-			"",
-			"- Updated the primary colour to use the new palette",
-			"- Adjusted border radius values",
-			"  - Inner radius: `4px`",
-			"  - Outer radius: `8px`",
-			"- Fixed the dark mode contrast ratio",
-			"",
-			"### Ordered list",
-			"",
-			"1. Read the existing config",
-			"2. Updated colour tokens",
-			"3. Rebuilt the project",
-			"",
-			"> **Note:** The contrast ratio now meets WCAG AA standards for all text sizes.",
-			"",
-			"### Code block",
-			"",
-			"```typescript",
-			"const theme = {",
-			"  colors: {",
-			"    primary: 'var(--cv-surface)',",
-			"    border: 'var(--cv-surface-border)',",
-			"  },",
-			"  radius: { s: '4px', m: '8px', l: '16px' },",
-			"};",
-			"```",
-			"",
-			"### Table",
-			"",
-			"| Token | Light | Dark |",
-			"|---|---|---|",
-			"| `--cv-surface` | `#f2f2f2` | `#1e1e1e` |",
-			"| `--cv-surface-border` | `#d9d9d9` | `#333333` |",
-			"| `--background-primary` | `#ffffff` | `#1a1a1a` |",
-			"",
-			"---",
-			"",
-			"The build completed successfully. You can check the [Obsidian docs](https://docs.obsidian.md) for CSS variable reference.",
-		].join("\n"));
-
-		// Single-select question
-		this.renderQuestion({
-			kind: "question",
-			id: "demo-q1",
-			questions: [{
-				question: "Which approach should we use for the theme system?",
-				header: "Approach",
-				options: [
-					{ label: "CSS Variables", description: "Use native CSS custom properties with light/dark mode selectors" },
-					{ label: "CSS-in-JS", description: "Use a runtime theme provider like styled-components" },
-					{ label: "Tailwind", description: "Use Tailwind's built-in dark mode with utility classes" },
-				],
-				multiSelect: false,
-			}],
-		});
-
-		// Multi-select question
-		this.renderQuestion({
-			kind: "question",
-			id: "demo-q2",
-			questions: [{
-				question: "Which features do you want to enable?",
-				header: "Features",
-				options: [
-					{ label: "Dark mode", description: "Automatic light/dark theme switching" },
-					{ label: "Animations", description: "Smooth transitions and micro-interactions" },
-					{ label: "Compact mode", description: "Reduced spacing for information-dense views" },
-					{ label: "Custom fonts", description: "Allow user-specified typefaces" },
-				],
-				multiSelect: true,
-			}],
-		});
-
-		// Permission prompt demo
-		this.renderPermission({
-			kind: "permission",
-			id: "demo-perm",
-			toolName: "Bash",
-			input: { command: "rm -rf node_modules && npm install" },
-		});
-
-		// Compact boundary demo
-		this.showCompactBoundary();
-
-		// Error demo
-		this.showError("Connection to Claude CLI timed out after 30 seconds.");
-
-		// Second exchange — active/in-progress timeline with thinking
-		this.appendUserMessage("Can you also check if the tests pass?");
-		const active2 = this.ensureTimeline();
-		active2.addThinking("Let me run the test suite to check if everything passes after the theme changes.");
-		active2.addTool({
-			kind: "tool_use",
-			id: "demo-5",
-			name: "Bash",
-			input: { command: "npm test", description: "Run test suite" },
-		});
-		active2.addTool({
-			kind: "tool_use",
-			id: "demo-6",
-			name: "Read",
-			input: { file_path: "/test/results.json" },
-		});
 	}
 
 	private scrollToBottom(): void {
@@ -458,7 +396,7 @@ export class MessageList {
 		if (!parent) return;
 
 		const distanceFromBottom = parent.scrollHeight - parent.scrollTop - parent.clientHeight;
-		if (distanceFromBottom > 150) return; // user has scrolled up, don't hijack
+		if (distanceFromBottom > 150) return;
 
 		requestAnimationFrame(() => {
 			parent.scrollTop = parent.scrollHeight;

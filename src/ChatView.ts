@@ -10,7 +10,6 @@ import type {
 	ClaudeVaultSettings,
 	ClaudeModel,
 	SessionEntry,
-	ToolUseBlock,
 	PermissionBlock,
 } from "./types";
 import * as fs from "fs";
@@ -109,6 +108,9 @@ export class ChatView extends ItemView {
 	async onClose(): Promise<void> {
 		this.claude.abort();
 		this.orchestrator.abort();
+		if (this.voiceService.isRecording) {
+			this.voiceService.stopRecording();
+		}
 	}
 
 	// ─── Layout ──────────────────────────────────────────────────────────
@@ -118,11 +120,11 @@ export class ChatView extends ItemView {
 
 		// Bar: menu + spacer + more (48px)
 		const bar = this.headerEl.createDiv({ cls: "cv-header__bar" });
-		const menuBtn = bar.createDiv({ cls: "clickable-icon cv-icon-btn" });
+		const menuBtn = bar.createDiv({ cls: "cv-icon-btn" });
 		setIcon(menuBtn, "menu");
 		menuBtn.addEventListener("click", () => this.openSessionModal());
 		bar.createDiv({ cls: "cv-header__spacer" });
-		const moreBtn = bar.createDiv({ cls: "clickable-icon cv-icon-btn" });
+		const moreBtn = bar.createDiv({ cls: "cv-icon-btn" });
 		setIcon(moreBtn, "more-horizontal");
 
 		// Avatar group: below bar in DOM, overlays bar via negative margin when closed
@@ -138,7 +140,12 @@ export class ChatView extends ItemView {
 	private buildMessages(root: HTMLElement): void {
 		const scrollEl = root.createDiv({ cls: "cv-messages-scroll" });
 		const messagesEl = scrollEl.createDiv({ cls: "cv-messages" });
-		this.messageList = new MessageList(messagesEl, this);
+		this.messageList = new MessageList(messagesEl, this, this.assetResolver);
+
+		// Wire reply action
+		this.messageList.onReply((agentId, agentName) => {
+			this.inputBar.setReplyContext(agentId, agentName);
+		});
 	}
 
 	private buildInput(root: HTMLElement): void {
@@ -162,7 +169,7 @@ export class ChatView extends ItemView {
 	private handleSend(text: string): void {
 		if (this.claude.isActive() || this.orchestrator.isActive()) return;
 
-		this.messageList.appendUserMessage(text);
+		this.messageList.appendTopLevelMessage(text);
 		this.inputBar.setEnabled(false);
 
 		const hasWatching = this.settings.agents.some((a) => a.state === "watching");
@@ -176,38 +183,64 @@ export class ChatView extends ItemView {
 	}
 
 	private handleAgentPipeline(text: string): void {
-		const threadEl = this.messageList.createThread();
-
-		// Track per-agent text elements
-		const agentTextEls = new Map<string, HTMLElement>();
-		const agentTextContent = new Map<string, string>();
+		// Per-agent state: thinking label while working, full card when done
+		const agentThinkingEls = new Map<string, HTMLElement>();
+		const agentBuffers = new Map<string, string>();
 
 		this.orchestrator.on("agent-event", ({ agentId, agentName, agentColor, event }) => {
 			switch (event.type) {
 				case "text_delta": {
-					if (!agentTextEls.has(agentId)) {
-						const el = this.messageList.appendAgentResponse(
-							threadEl, agentId, agentName, agentColor, this.assetResolver,
+					// Show thinking label on first event from this agent
+					if (!agentThinkingEls.has(agentId)) {
+						const thinkingEl = this.messageList.showAgentThinking(
+							agentId, agentName, agentColor, this.assetResolver,
 						);
-						agentTextEls.set(agentId, el);
-						agentTextContent.set(agentId, "");
+						agentThinkingEls.set(agentId, thinkingEl);
+						agentBuffers.set(agentId, "");
 					}
-					const prev = agentTextContent.get(agentId) ?? "";
-					const updated = prev + event.delta;
-					agentTextContent.set(agentId, updated);
-					this.messageList.updateAgentText(agentTextEls.get(agentId)!, updated);
+					// Buffer — don't render
+					const prev = agentBuffers.get(agentId) ?? "";
+					agentBuffers.set(agentId, prev + event.delta);
 					break;
 				}
 
 				case "text_full": {
-					if (!agentTextEls.has(agentId)) {
-						const el = this.messageList.appendAgentResponse(
-							threadEl, agentId, agentName, agentColor, this.assetResolver,
+					if (!agentThinkingEls.has(agentId)) {
+						const thinkingEl = this.messageList.showAgentThinking(
+							agentId, agentName, agentColor, this.assetResolver,
 						);
-						agentTextEls.set(agentId, el);
+						agentThinkingEls.set(agentId, thinkingEl);
 					}
-					agentTextContent.set(agentId, event.text);
-					this.messageList.updateAgentText(agentTextEls.get(agentId)!, event.text);
+					agentBuffers.set(agentId, event.text);
+					break;
+				}
+
+				case "thinking":
+				case "session_id": {
+					// Show thinking label when agent starts
+					if (!agentThinkingEls.has(agentId)) {
+						const thinkingEl = this.messageList.showAgentThinking(
+							agentId, agentName, agentColor, this.assetResolver,
+						);
+						agentThinkingEls.set(agentId, thinkingEl);
+					}
+					break;
+				}
+
+				case "done": {
+					// Agent finished — remove thinking, render full card
+					const thinkingEl = agentThinkingEls.get(agentId);
+					if (thinkingEl) {
+						this.messageList.removeAgentThinking(thinkingEl);
+						agentThinkingEls.delete(agentId);
+					}
+					const content = agentBuffers.get(agentId) ?? "";
+					if (content.trim()) {
+						this.messageList.appendAgentCard(
+							agentId, agentName, agentColor, content, this.assetResolver,
+						);
+					}
+					agentBuffers.delete(agentId);
 					break;
 				}
 
@@ -233,9 +266,18 @@ export class ChatView extends ItemView {
 		});
 
 		this.orchestrator.once("all-done", () => {
+			// Clean up any remaining thinking labels
+			for (const [, el] of agentThinkingEls) {
+				this.messageList.removeAgentThinking(el);
+			}
 			this.orchestrator.removeAllListeners("agent-event");
 			this.inputBar.setEnabled(true);
 			this.inputBar.focus();
+		});
+
+		// Wire reply action
+		this.messageList.onReply((agentId, agentName) => {
+			this.inputBar.setReplyContext(agentId, agentName);
 		});
 
 		void this.orchestrator.processMessage(text, this.settings.agents, this.settings.model);
@@ -254,19 +296,7 @@ export class ChatView extends ItemView {
 					break;
 				}
 
-				case "thinking": {
-					if (this.settings.showThinkingTimeline) {
-						if (event.partial) {
-							this.messageList.updateThinkingText(event.content);
-						} else {
-							this.messageList.addThinkingText(event.content);
-						}
-					}
-					break;
-				}
-
 				case "tool_use": {
-					// New tool after text means a new response segment
 					textEl = null;
 					textContent = "";
 
@@ -289,25 +319,11 @@ export class ChatView extends ItemView {
 						this.messageList.onQuestion(event.id, (answers) => {
 							this.claude.respond(JSON.stringify(answers));
 						});
-					} else if (this.settings.showThinkingTimeline) {
-						const block: ToolUseBlock = {
-							kind: "tool_use",
-							id: event.id,
-							name: event.name,
-							input: event.input,
-						};
-						this.messageList.addToolToTimeline(block);
 					}
 					break;
 				}
 
-				case "tool_result": {
-					this.messageList.updateToolResult(event.toolUseId, event.content, event.isError);
-					break;
-				}
-
 				case "text_delta": {
-					if (this.settings.showThinkingTimeline) this.messageList.completeTimeline();
 					if (!textEl) {
 						textEl = this.messageList.appendAssistantText("");
 					}
@@ -317,7 +333,6 @@ export class ChatView extends ItemView {
 				}
 
 				case "text_full": {
-					if (this.settings.showThinkingTimeline) this.messageList.completeTimeline();
 					if (!textEl) {
 						textEl = this.messageList.appendAssistantText("");
 					}
@@ -353,7 +368,6 @@ export class ChatView extends ItemView {
 		});
 
 		this.claude.once("done", () => {
-			if (this.settings.showThinkingTimeline) this.messageList.completeTimeline();
 			this.inputBar.setEnabled(true);
 			this.inputBar.focus();
 			this.claude.removeAllListeners("event");

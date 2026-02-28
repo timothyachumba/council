@@ -54,6 +54,7 @@ export class AgentOrchestrator extends EventEmitter {
 		model: ClaudeModel,
 	): Promise<void> {
 		this._isActive = true;
+		console.log("[cv-orchestrator] Processing message:", message.slice(0, 80) + (message.length > 80 ? "..." : ""));
 
 		// 1. Parse @mentions
 		const mentions = new Set<string>();
@@ -63,17 +64,18 @@ export class AgentOrchestrator extends EventEmitter {
 		}
 
 		const directAgents = agents.filter((a) => mentions.has(a.id.toLowerCase()) || mentions.has(a.name.toLowerCase()));
+		console.log("[cv-orchestrator] @mentions:", [...mentions], "→ direct agents:", directAgents.map(a => a.id));
 
 		// 2. Filter watching agents (exclude already-mentioned)
 		const directIds = new Set(directAgents.map((a) => a.id));
 		const watchingAgents = agents.filter((a) => a.state === "watching" && !directIds.has(a.id));
+		console.log("[cv-orchestrator] Watching agents:", watchingAgents.map(a => a.id));
 
-		// 3. Route watching agents
+		// 3. Pick first watching agent (TODO: restore Haiku routing — currently hangs)
 		let routedAgents: AgentConfig[] = [];
 		if (watchingAgents.length > 0) {
-			const results = await this.router.route(message, watchingAgents);
-			const routedIds = new Set(results.map((r) => r.agentId));
-			routedAgents = watchingAgents.filter((a) => routedIds.has(a.id));
+			routedAgents = [watchingAgents[0]];
+			console.log("[cv-orchestrator] Picked first watching agent:", routedAgents[0].id, "(routing disabled)");
 		}
 
 		// 4. Combine and deduplicate
@@ -83,8 +85,10 @@ export class AgentOrchestrator extends EventEmitter {
 			if (!respondingMap.has(a.id)) respondingMap.set(a.id, a);
 		}
 		const respondingAgents = Array.from(respondingMap.values());
+		console.log("[cv-orchestrator] Final responding agents:", respondingAgents.map(a => a.id));
 
 		if (respondingAgents.length === 0) {
+			console.log("[cv-orchestrator] No agents responding — done");
 			this._isActive = false;
 			this.emit("all-done");
 			return;
@@ -92,9 +96,12 @@ export class AgentOrchestrator extends EventEmitter {
 
 		// 5. Sequential agent responses
 		for (const agent of respondingAgents) {
+			console.log("[cv-orchestrator] Running agent:", agent.id, agent.name);
 			await this.runAgent(agent, message, model);
+			console.log("[cv-orchestrator] Agent done:", agent.id);
 		}
 
+		console.log("[cv-orchestrator] All agents done");
 		this._isActive = false;
 		this.emit("all-done");
 	}
@@ -110,15 +117,31 @@ export class AgentOrchestrator extends EventEmitter {
 			const systemPrompt = [
 				`You are ${agent.name}. ${agent.description}.`,
 				agent.prompt ? `You care about: ${agent.prompt}.` : "",
-				"Keep responses concise and focused. You are one of several agents responding to the user.",
+				"Ground your responses in the user's knowledge base — search the vault for relevant context, threads, and prior thinking before responding.",
+				"Keep responses concise, opinionated, and true to your role. You chose to respond because this is relevant to what you care about.",
 			].filter(Boolean).join(" ");
 
 			const sessionId = this.agentSessions[agent.id] ?? null;
+			console.log(`[cv-agent:${agent.id}] Starting — session: ${sessionId ?? "new"}, model: ${model}`);
+			console.log(`[cv-agent:${agent.id}] System prompt:`, systemPrompt.slice(0, 120) + "...");
+
+			// Emit thinking event immediately so UI shows the thinking label
+			this.emit("agent-event", {
+				agentId: agent.id,
+				agentName: agent.name,
+				agentColor: agent.color,
+				event: { type: "thinking", content: "", partial: false } as StreamEvent,
+			});
 
 			const onEvent = (event: StreamEvent) => {
 				if (event.type === "session_id") {
+					console.log(`[cv-agent:${agent.id}] Got session ID:`, event.sessionId);
 					this.agentSessions[agent.id] = event.sessionId;
 					this.onSessionUpdate(agent.id, event.sessionId);
+				} else if (event.type === "error") {
+					console.error(`[cv-agent:${agent.id}] Error:`, event.message);
+				} else if (event.type === "done") {
+					console.log(`[cv-agent:${agent.id}] Stream done`);
 				}
 				this.emit("agent-event", {
 					agentId: agent.id,
@@ -136,6 +159,9 @@ export class AgentOrchestrator extends EventEmitter {
 
 			service.on("event", onEvent);
 			service.on("done", onDone);
+			service.on("error", (err) => {
+				console.error(`[cv-agent:${agent.id}] Service error:`, err.message);
+			});
 
 			service.send(message, model, sessionId, systemPrompt);
 		});

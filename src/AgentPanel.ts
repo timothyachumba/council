@@ -202,14 +202,14 @@ export class AgentPanel {
 
 		const actions = bottom.createDiv({ cls: "cv-agent-actions" });
 
-		const cancelBtn = actions.createEl("button", { cls: "cv-agent-btn", text: "Cancel" });
+		const cancelBtn = actions.createEl("button", { cls: "cv-btn cv-agent-btn", text: "Cancel" });
 		cancelBtn.addEventListener("click", () => {
 			this.resetDrafts();
 			this.syncAvatarFilters();
 			this.close();
 		});
 
-		const saveBtn = actions.createEl("button", { cls: "cv-agent-btn", text: "Save" });
+		const saveBtn = actions.createEl("button", { cls: "cv-btn cv-agent-btn", text: "Save" });
 		saveBtn.addEventListener("click", () => {
 			for (let i = 0; i < this.agents.length; i++) {
 				this.agents[i].state = this.drafts[i].state;
