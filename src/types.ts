@@ -150,6 +150,24 @@ export interface SessionEntry {
 	projectPath: string;
 }
 
+// ─── Chat history ──────────────────────────────────────────────────────────
+
+export type StoredEvent =
+	| { type: "user_top";   id?: string; text: string }
+	| { type: "user_reply"; id?: string; text: string }
+	| { type: "agent";      id?: string; agentId: string; agentName: string; agentColor: string; content: string };
+
+export function makeEventId(): string {
+	return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+const CHAT_HISTORY_LIMIT = 200;
+
+export function appendStoredEvent(history: StoredEvent[], event: StoredEvent): StoredEvent[] {
+	const next = [...history, event];
+	return next.length > CHAT_HISTORY_LIMIT ? next.slice(next.length - CHAT_HISTORY_LIMIT) : next;
+}
+
 // ─── Plugin settings ───────────────────────────────────────────────────────
 
 export type ClaudeModel = "claude-sonnet-4-6" | "claude-opus-4-6" | "claude-haiku-4-5-20251001";
@@ -174,6 +192,7 @@ export interface ClaudeVaultSettings {
 	agentSessions: Record<string, string | null>;
 	parakeetPath: string | null;
 	voiceAutoSend: boolean;
+	chatHistory: StoredEvent[];
 }
 
 export const DEFAULT_AGENTS: AgentConfig[] = [
@@ -192,4 +211,5 @@ export const DEFAULT_SETTINGS: ClaudeVaultSettings = {
 	agentSessions: {},
 	parakeetPath: null,
 	voiceAutoSend: true,
+	chatHistory: [],
 };

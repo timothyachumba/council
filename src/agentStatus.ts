@@ -1,0 +1,278 @@
+export type StatusPhase = "idle" | "searching" | "reading" | "analyzing" | "writing";
+
+const STATUS: Record<string, Record<StatusPhase, string[]>> = {
+
+	edge: {
+		idle: [
+			"is finding the entry point",
+			"is listening for the assumption",
+			"is watching the reasoning",
+			"is reading the claim",
+			"is noting the framing",
+			"is marking the premise",
+			"is tracing the logic",
+			"is holding the tension",
+			"is looking for the gap",
+			"is paying attention",
+		],
+		searching: [
+			"is looking for the other side",
+			"is checking what's been said before",
+			"is finding the prior position",
+			"is looking for what's missing",
+			"is searching for counter-evidence",
+			"is pulling the counter-argument",
+			"is looking for contradictions",
+			"is finding the opposing view",
+			"is checking the evidence",
+			"is searching the record",
+		],
+		reading: [
+			"is reading the prior position",
+			"is examining the existing argument",
+			"is reading what you've said before",
+			"is studying the claim",
+			"is reading the thread",
+			"is following the logic",
+			"is reading closely",
+			"is examining the evidence",
+			"is tracing the argument",
+			"is reading the record",
+		],
+		analyzing: [
+			"is pressure-testing",
+			"is finding the load-bearing assumption",
+			"is testing the claim",
+			"is weighing the tension",
+			"is examining the premise",
+			"is looking for the weak point",
+			"is stress-testing the reasoning",
+			"is identifying the assumption",
+			"is probing the logic",
+			"is mapping the contradiction",
+		],
+		writing: [
+			"is naming the crack",
+			"is forming the question",
+			"is sharpening the challenge",
+			"is articulating the tension",
+			"is finding the right question",
+			"is stating the problem",
+			"is naming the assumption",
+			"is framing the challenge",
+			"is pointing at the gap",
+			"is writing the push-back",
+		],
+	},
+
+	loom: {
+		idle: [
+			"is seeing the structure",
+			"is noticing the pattern",
+			"is reading the map",
+			"is tracing the threads",
+			"is watching the shape of things",
+			"is sensing the connections",
+			"is reading between the lines",
+			"is looking at the graph",
+			"is observing",
+			"is mapping",
+		],
+		searching: [
+			"is searching across threads",
+			"is pulling from the graph",
+			"is looking for related thinking",
+			"is searching the vault",
+			"is finding the thread",
+			"is searching across contexts",
+			"is looking for the resonance",
+			"is pulling the connections",
+			"is searching for the pattern",
+			"is reading the related material",
+		],
+		reading: [
+			"is reading the thread",
+			"is following the reference",
+			"is reading the adjacent thinking",
+			"is reading the connected document",
+			"is tracing the cross-reference",
+			"is reading the related entry",
+			"is following the link",
+			"is reading what connects",
+			"is following the thread",
+			"is reading the prior thinking",
+		],
+		analyzing: [
+			"is seeing the connection",
+			"is tracing the pattern",
+			"is measuring the distance between ideas",
+			"is recognising the resonance",
+			"is mapping the relationship",
+			"is identifying the cross-context link",
+			"is noticing the parallel",
+			"is seeing where things overlap",
+			"is finding the shared structure",
+			"is reading the relationship",
+		],
+		writing: [
+			"is weaving the connection",
+			"is drawing the line between",
+			"is showing the link",
+			"is pointing at the pattern",
+			"is surfacing the resonance",
+			"is naming the connection",
+			"is mapping the intersection",
+			"is describing the relationship",
+			"is connecting the threads",
+			"is drawing the map",
+		],
+	},
+
+	ember: {
+		idle: [
+			"is catching the spark",
+			"is feeling for the edge",
+			"is sensing the incompleteness",
+			"is listening for the half-formed idea",
+			"is finding the seed",
+			"is noticing what's unfinished",
+			"is watching for the rough sketch",
+			"is reading the gesture",
+			"is feeling the potential",
+			"is looking for where to extend",
+		],
+		searching: [
+			"is looking for adjacent seeds",
+			"is finding similar starts",
+			"is searching for prior sketches",
+			"is looking for related beginnings",
+			"is finding the adjacent possible",
+			"is searching for what's nearby",
+			"is looking for connected ideas",
+			"is finding the raw material",
+			"is searching for starting points",
+			"is pulling the adjacent thinking",
+		],
+		reading: [
+			"is reading the rough shape",
+			"is understanding the gesture",
+			"is reading the incomplete idea",
+			"is reading the seed",
+			"is following the sketch",
+			"is reading the unfinished thought",
+			"is reading the starting point",
+			"is understanding the direction",
+			"is reading what's there so far",
+			"is following the early thinking",
+		],
+		analyzing: [
+			"is exploring directions",
+			"is branching the idea",
+			"is finding where it could go",
+			"is mapping the possibilities",
+			"is tracing the extensions",
+			"is looking for what it could become",
+			"is seeing the directions",
+			"is imagining the extensions",
+			"is following each branch",
+			"is finding the potential",
+		],
+		writing: [
+			"is extending the line",
+			"is growing the seed",
+			"is carrying the idea further",
+			"is continuing the thought",
+			"is running with it",
+			"is taking it further",
+			"is building on the sketch",
+			"is extending the gesture",
+			"is growing the idea",
+			"is following through",
+		],
+	},
+
+	quill: {
+		idle: [
+			"is preparing to write",
+			"is finding the structure",
+			"is considering the form",
+			"is thinking about the shape",
+			"is finding the right frame",
+			"is considering the argument",
+			"is gathering the thinking",
+			"is finding the voice",
+			"is reading the material",
+			"is preparing the draft",
+		],
+		searching: [
+			"is gathering material",
+			"is pulling source text",
+			"is finding the evidence",
+			"is searching for the detail",
+			"is gathering the facts",
+			"is pulling the relevant material",
+			"is finding what's needed",
+			"is searching the record",
+			"is gathering the supporting material",
+			"is pulling the threads together",
+		],
+		reading: [
+			"is reading for structure",
+			"is absorbing the argument",
+			"is reading the source material",
+			"is following the argument",
+			"is reading for the key points",
+			"is reading the material closely",
+			"is absorbing the context",
+			"is reading what's there",
+			"is understanding the source",
+			"is reading the prior thinking",
+		],
+		analyzing: [
+			"is shaping the arc",
+			"is finding the right frame",
+			"is structuring the argument",
+			"is finding the shape",
+			"is building the structure",
+			"is mapping the argument",
+			"is planning the draft",
+			"is finding the through-line",
+			"is organising the thinking",
+			"is building the arc",
+		],
+		writing: [
+			"is drafting",
+			"is writing in your voice",
+			"is composing",
+			"is finding the words",
+			"is writing the draft",
+			"is putting it into words",
+			"is shaping the prose",
+			"is crafting the text",
+			"is writing it out",
+			"is forming the argument",
+		],
+	},
+};
+
+const lastPicked: Record<string, number> = {};
+
+export function getStatusString(agentId: string, phase: StatusPhase): string {
+	const pool = STATUS[agentId]?.[phase];
+	if (!pool || pool.length === 0) return "is thinking";
+
+	const key = `${agentId}:${phase}`;
+	let idx: number;
+	do {
+		idx = Math.floor(Math.random() * pool.length);
+	} while (pool.length > 1 && idx === lastPicked[key]);
+	lastPicked[key] = idx;
+
+	return pool[idx];
+}
+
+export function getToolPhase(toolName: string): StatusPhase {
+	if (["Grep", "Glob", "WebSearch"].includes(toolName)) return "searching";
+	if (["Read", "WebFetch"].includes(toolName))           return "reading";
+	return "analyzing";
+}

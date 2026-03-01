@@ -2,8 +2,9 @@ import { setIcon } from "obsidian";
 import { animate } from "motion";
 import * as fs from "fs";
 import * as path from "path";
-import type { ClaudeModel } from "./types";
+import type { ClaudeModel, AgentConfig } from "./types";
 import type { VoiceService } from "./VoiceService";
+import { AGENT_COLORS } from "./agentColors";
 
 const COMMANDS_PATH = path.join(
 	process.env.HOME ?? "/Users/timothyachumba",
@@ -55,6 +56,10 @@ export class InputBar {
 	// Phase state machine
 	private phase: InputPhase = "idle";
 	private demoMode = false;
+
+	// Agents (for @mention completion)
+	private agents: AgentConfig[] = [];
+	private assetResolver: ((path: string) => string) | null = null;
 
 	// Reply context
 	private replyChipEl: HTMLElement | null = null;
@@ -146,6 +151,7 @@ export class InputBar {
 		this.textarea.addEventListener("input", () => {
 			this.autoResize();
 			this.handleSlashCommand();
+			if (!this.picker) this.handleMentionCompletion();
 			this.updateSendState();
 		});
 
@@ -222,25 +228,16 @@ export class InputBar {
 	}
 
 	private showPicker(commands: string[], slashIdx: number, queryLen: number): void {
-		this.closePicker();
-		const picker = this.container.createDiv({ cls: "cv-picker" });
-		this.picker = picker;
-		for (let i = 0; i < Math.min(commands.length, 8); i++) {
-			const cmd = commands[i];
-			const item = picker.createDiv({
-				cls: "cv-picker-item" + (i === 0 ? " cv-picker-item--active" : ""),
-				text: "/" + cmd,
-			});
-			item.addEventListener("click", () => {
-				this.insertCommand(cmd, slashIdx, queryLen);
-				this.closePicker();
-				this.textarea.focus();
-			});
-			item.addEventListener("mouseenter", () => {
-				picker.querySelectorAll(".cv-picker-item").forEach((el) => el.removeClass("cv-picker-item--active"));
-				item.addClass("cv-picker-item--active");
-			});
-		}
+		this.showUnifiedPicker(
+			commands.slice(0, 8).map((cmd) => ({
+				renderLeft: (el: HTMLElement) => {
+					const iconEl = el.createDiv({ cls: "cv-picker-item__icon" });
+					setIcon(iconEl, "zap");
+					el.createSpan({ cls: "cv-picker-item__name cv-picker-item__name--mono", text: "/" + cmd });
+				},
+				onSelect: () => this.insertCommand(cmd, slashIdx, queryLen),
+			})),
+		);
 	}
 
 	private insertCommand(cmd: string, slashIdx: number, queryLen: number): void {
@@ -251,6 +248,38 @@ export class InputBar {
 		const newPos = slashIdx + cmd.length + 2;
 		this.textarea.setSelectionRange(newPos, newPos);
 		this.autoResize();
+	}
+
+	// ─── Shared picker ────────────────────────────────────────────────────
+
+	private showUnifiedPicker(items: Array<{
+		renderLeft: (el: HTMLElement) => void;
+		renderRight?: (el: HTMLElement) => void;
+		onSelect: () => void;
+	}>): void {
+		this.closePicker();
+		const picker = this.container.createDiv({ cls: "cv-picker" });
+		this.picker = picker;
+		items.forEach((item, i) => {
+			const row = picker.createDiv({
+				cls: "cv-picker-item" + (i === 0 ? " cv-picker-item--active" : ""),
+			});
+			const left = row.createDiv({ cls: "cv-picker-item__left" });
+			item.renderLeft(left);
+			if (item.renderRight) {
+				const right = row.createDiv({ cls: "cv-picker-item__right" });
+				item.renderRight(right);
+			}
+			row.addEventListener("click", () => {
+				item.onSelect();
+				this.closePicker();
+				this.textarea.focus();
+			});
+			row.addEventListener("mouseenter", () => {
+				picker.querySelectorAll(".cv-picker-item").forEach((el) => el.removeClass("cv-picker-item--active"));
+				row.addClass("cv-picker-item--active");
+			});
+		});
 	}
 
 	private closePicker(): void {
@@ -268,17 +297,71 @@ export class InputBar {
 		});
 	}
 
+	// ─── @mention completion ──────────────────────────────────────────────
+
+	private handleMentionCompletion(): void {
+		const val = this.textarea.value;
+		const cursorPos = this.textarea.selectionStart ?? 0;
+		const beforeCursor = val.slice(0, cursorPos);
+		const atIdx = beforeCursor.lastIndexOf("@");
+		if (atIdx === -1) { this.closePicker(); return; }
+		const charBefore = beforeCursor[atIdx - 1];
+		if (charBefore !== undefined && !/\s/.test(charBefore)) { this.closePicker(); return; }
+		const afterAt = beforeCursor.slice(atIdx + 1);
+		if (/\s/.test(afterAt)) { this.closePicker(); return; }
+		const query = afterAt.toLowerCase();
+		const matches = this.agents.filter(
+			(a) => a.name.toLowerCase().startsWith(query) || a.id.toLowerCase().startsWith(query),
+		);
+		if (matches.length === 0) { this.closePicker(); return; }
+		this.showMentionPicker(matches, atIdx, afterAt.length);
+	}
+
+	private showMentionPicker(agents: AgentConfig[], atIdx: number, queryLen: number): void {
+		this.showUnifiedPicker(
+			agents.map((agent) => ({
+				renderLeft: (el: HTMLElement) => {
+					const avatar = el.createDiv({ cls: "cv-picker-item__avatar" });
+					if (this.assetResolver) {
+						avatar.createEl("img", {
+							attr: { src: this.assetResolver(`assets/${agent.id}.png`), alt: "" },
+						});
+					}
+					const name = el.createSpan({ cls: "cv-picker-item__name", text: agent.name });
+					name.style.color = AGENT_COLORS[agent.id] ?? agent.color;
+				},
+				renderRight: (el: HTMLElement) => {
+					el.createSpan({ cls: "cv-picker-item__desc", text: agent.description });
+				},
+				onSelect: () => this.insertMention(agent, atIdx, queryLen),
+			})),
+		);
+	}
+
+	private insertMention(agent: AgentConfig, atIdx: number, queryLen: number): void {
+		const val = this.textarea.value;
+		const before = val.slice(0, atIdx);
+		const after = val.slice(atIdx + 1 + queryLen);
+		const mention = `@${agent.name} `;
+		this.textarea.value = before + mention + after;
+		const newPos = atIdx + mention.length;
+		this.textarea.setSelectionRange(newPos, newPos);
+		this.autoResize();
+		this.updateSendState();
+	}
+
 	private submit(): void {
 		let text = this.textarea.value.trim();
 		if (!text || !this.onSendCallback) return;
 
 		// Prepend @mention if replying to a specific agent
+		const isReply = !!this.replyAgentName;
 		if (this.replyAgentName) {
 			text = `@${this.replyAgentName} ${text}`;
-			this.clearReplyContext();
 		}
 
 		this.onSendCallback(text);
+		if (isReply) this.clearReplyContext();
 		this.textarea.value = "";
 		this.textarea.style.height = "auto";
 		this.closePicker();
@@ -579,6 +662,11 @@ export class InputBar {
 
 	// ─── Public API ───────────────────────────────────────────────────────
 
+	setAgents(agents: AgentConfig[], assetResolver?: (path: string) => string): void {
+		this.agents = agents;
+		this.assetResolver = assetResolver ?? null;
+	}
+
 	setVoiceService(service: VoiceService, autoSend: boolean): void {
 		this.voiceService = service;
 		this.voiceAutoSend = autoSend;
@@ -659,6 +747,10 @@ export class InputBar {
 			this.replyChipEl.remove();
 			this.replyChipEl = null;
 		}
+	}
+
+	hasReplyContext(): boolean {
+		return this.replyAgentId !== null;
 	}
 
 	focus(): void {

@@ -11,9 +11,12 @@ import type {
 	ClaudeModel,
 	SessionEntry,
 	PermissionBlock,
+	StoredEvent,
 } from "./types";
+import { appendStoredEvent, makeEventId } from "./types";
 import * as fs from "fs";
 import * as path from "path";
+import { getStatusString, getToolPhase } from "./agentStatus";
 
 export const CHAT_VIEW_TYPE = "claude-vault:chat";
 
@@ -93,6 +96,15 @@ export class ChatView extends ItemView {
 		this.buildMessages(root);
 		this.buildInput(root);
 
+		// Replay persisted history
+		console.log("[cv-history] onOpen — chatHistory length:", this.settings.chatHistory?.length ?? 0);
+		if (this.settings.chatHistory?.length) {
+			this.messageList.replay(this.settings.chatHistory, this.assetResolver, (id) => {
+				this.settings.chatHistory = (this.settings.chatHistory ?? []).filter((e) => e.id !== id);
+				void this.saveSettings();
+			});
+		}
+
 		// Close panel on outside click
 		root.addEventListener("click", (e) => {
 			if (!this.agentPanel.isOpen()) return;
@@ -151,6 +163,7 @@ export class ChatView extends ItemView {
 	private buildInput(root: HTMLElement): void {
 		const container = root.createDiv({ cls: "cv-input-container" });
 		this.inputBar = new InputBar(container, this.settings.model);
+		this.inputBar.setAgents(this.settings.agents, this.assetResolver);
 		this.inputBar.setVoiceService(this.voiceService, this.settings.voiceAutoSend);
 		this.inputBar.onSend((text) => this.handleSend(text));
 		this.inputBar.onModelChange((model) => {
@@ -169,7 +182,34 @@ export class ChatView extends ItemView {
 	private handleSend(text: string): void {
 		if (this.claude.isActive() || this.orchestrator.isActive()) return;
 
-		this.messageList.appendTopLevelMessage(text);
+		// Reply stays in thread, new message breaks out
+		const isReply = this.inputBar.hasReplyContext();
+		const userEventId = makeEventId();
+		let userEl: HTMLElement;
+		if (isReply) {
+			userEl = this.messageList.appendUserMessage(text);
+		} else {
+			userEl = this.messageList.appendTopLevelMessage(text);
+		}
+
+		// Persist to history
+		const userEvent: StoredEvent = isReply
+			? { type: "user_reply", id: userEventId, text }
+			: { type: "user_top", id: userEventId, text };
+		this.settings.chatHistory = appendStoredEvent(this.settings.chatHistory ?? [], userEvent);
+		console.log("[cv-history] Saving user event, history length:", this.settings.chatHistory.length);
+		void this.saveSettings();
+
+		// Attach delete handler for top-level messages (deletes message + thread below)
+		if (!isReply) {
+			this.messageList.attachDeleteHandler(userEl, () => {
+				const thread = userEl.nextElementSibling as HTMLElement | null;
+				userEl.remove();
+				if (thread?.classList.contains("cv-thread")) thread.remove();
+				this.settings.chatHistory = (this.settings.chatHistory ?? []).filter((e) => e.id !== userEventId);
+				void this.saveSettings();
+			});
+		}
 		this.inputBar.setEnabled(false);
 
 		const hasWatching = this.settings.agents.some((a) => a.state === "watching");
@@ -186,9 +226,19 @@ export class ChatView extends ItemView {
 		// Per-agent state: thinking label while working, full card when done
 		const agentThinkingEls = new Map<string, HTMLElement>();
 		const agentBuffers = new Map<string, string>();
+		const agentWritingPhase = new Set<string>();
 
 		this.orchestrator.on("agent-event", ({ agentId, agentName, agentColor, event }) => {
 			switch (event.type) {
+				case "tool_use": {
+					const thinkingEl = agentThinkingEls.get(agentId);
+					if (thinkingEl) {
+						const phase = getToolPhase(event.name);
+						this.messageList.updateAgentThinkingStatus(thinkingEl, getStatusString(agentId, phase));
+					}
+					break;
+				}
+
 				case "text_delta": {
 					// Show thinking label on first event from this agent
 					if (!agentThinkingEls.has(agentId)) {
@@ -197,6 +247,12 @@ export class ChatView extends ItemView {
 						);
 						agentThinkingEls.set(agentId, thinkingEl);
 						agentBuffers.set(agentId, "");
+					}
+					// Transition to writing phase on first text
+					if (!agentWritingPhase.has(agentId)) {
+						agentWritingPhase.add(agentId);
+						const thinkingEl = agentThinkingEls.get(agentId)!;
+						this.messageList.updateAgentThinkingStatus(thinkingEl, getStatusString(agentId, "writing"));
 					}
 					// Buffer — don't render
 					const prev = agentBuffers.get(agentId) ?? "";
@@ -236,9 +292,21 @@ export class ChatView extends ItemView {
 					}
 					const content = agentBuffers.get(agentId) ?? "";
 					if (content.trim()) {
-						this.messageList.appendAgentCard(
+						const card = this.messageList.appendAgentCard(
 							agentId, agentName, agentColor, content, this.assetResolver,
 						);
+						// Persist agent response to history
+						const agentEventId = makeEventId();
+						const agentEvent: StoredEvent = { type: "agent", id: agentEventId, agentId, agentName, agentColor, content };
+						this.settings.chatHistory = appendStoredEvent(this.settings.chatHistory ?? [], agentEvent);
+						console.log("[cv-history] Saving agent event, history length:", this.settings.chatHistory.length);
+						void this.saveSettings();
+						// Attach delete handler
+						this.messageList.attachDeleteHandler(card, () => {
+							card.remove();
+							this.settings.chatHistory = (this.settings.chatHistory ?? []).filter((e) => e.id !== agentEventId);
+							void this.saveSettings();
+						});
 					}
 					agentBuffers.delete(agentId);
 					break;
@@ -382,6 +450,7 @@ export class ChatView extends ItemView {
 		this.claude.abort();
 		this.currentSessionId = null;
 		this.settings.activeSessionId = null;
+		this.settings.chatHistory = [];
 		void this.saveSettings();
 		this.messageList.clear();
 		this.inputBar.setEnabled(true);

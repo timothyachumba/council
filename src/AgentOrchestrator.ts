@@ -1,6 +1,7 @@
 import { EventEmitter } from "events";
 import { ClaudeService } from "./ClaudeService";
 import { AgentRouter } from "./AgentRouter";
+import { AGENT_PROMPTS } from "./agentPrompts";
 import type { AgentConfig, ClaudeModel, StreamEvent } from "./types";
 
 export interface AgentEvent {
@@ -71,11 +72,14 @@ export class AgentOrchestrator extends EventEmitter {
 		const watchingAgents = agents.filter((a) => a.state === "watching" && !directIds.has(a.id));
 		console.log("[cv-orchestrator] Watching agents:", watchingAgents.map(a => a.id));
 
-		// 3. Pick first watching agent (TODO: restore Haiku routing — currently hangs)
+		// 3. Route watching agents via Haiku — skip if user directly addressed someone
 		let routedAgents: AgentConfig[] = [];
-		if (watchingAgents.length > 0) {
-			routedAgents = [watchingAgents[0]];
-			console.log("[cv-orchestrator] Picked first watching agent:", routedAgents[0].id, "(routing disabled)");
+		if (watchingAgents.length > 0 && directAgents.length === 0) {
+			console.log("[cv-orchestrator] Routing to Haiku...");
+			const results = await this.router.route(message, watchingAgents);
+			const routedIds = new Set(results.map((r) => r.agentId));
+			routedAgents = watchingAgents.filter((a) => routedIds.has(a.id));
+			console.log("[cv-orchestrator] Routed agents:", routedAgents.map(a => a.id));
 		}
 
 		// 4. Combine and deduplicate
@@ -114,12 +118,10 @@ export class AgentOrchestrator extends EventEmitter {
 				this.agentServices.set(agent.id, service);
 			}
 
-			const systemPrompt = [
-				`You are ${agent.name}. ${agent.description}.`,
-				agent.prompt ? `You care about: ${agent.prompt}.` : "",
-				"Ground your responses in the user's knowledge base — search the vault for relevant context, threads, and prior thinking before responding.",
-				"Keep responses concise, opinionated, and true to your role. You chose to respond because this is relevant to what you care about.",
-			].filter(Boolean).join(" ");
+			const basePrompt = AGENT_PROMPTS[agent.id] ?? `You are ${agent.name}. ${agent.description}. Keep responses concise, opinionated, and true to your role.`;
+			const systemPrompt = agent.prompt
+				? `${basePrompt}\n\nAdditional focus: ${agent.prompt}`
+				: basePrompt;
 
 			const sessionId = this.agentSessions[agent.id] ?? null;
 			console.log(`[cv-agent:${agent.id}] Starting — session: ${sessionId ?? "new"}, model: ${model}`);

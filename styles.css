@@ -113,7 +113,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--size-4-4);
-  padding: var(--size-4-4) var(--size-4-4) var(--size-4-2);
+  padding: var(--size-4-4) var(--size-4-4) 40px;
 }
 
 .cv-messages > .cv-thread + .cv-message--user {
@@ -151,11 +151,7 @@
 
 .cv-mention {
   font-weight: 600;
-  background-size: cover;
-  background-position: center;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--cv-mention-color, var(--text-accent));
 }
 
 /* ─── Assistant text ─────────────────────────────────────────────────────── */
@@ -173,6 +169,13 @@
   overflow-wrap: break-word;
   word-wrap: break-word;
   min-width: 0;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.cv-message--user .cv-text {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .cv-text p { margin: 0 0 var(--size-4-2); }
@@ -221,7 +224,7 @@
 .cv-text hr {
   border: none;
   border-top: 1px solid var(--background-modifier-border);
-  margin: var(--size-4-12) 0;
+  margin: var(--size-4-6) 0;
 }
 
 .cv-text code {
@@ -700,17 +703,88 @@
 }
 
 .cv-picker-item {
-  padding: 7px 12px;
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
   cursor: pointer;
-  font-family: var(--font-monospace);
 }
 
 .cv-picker-item:hover,
 .cv-picker-item--active {
   background: var(--background-modifier-hover);
+}
+
+/* ─── Unified picker ─────────────────────────────────────────────────────── */
+
+.cv-picker {
+  border-radius: 12px;
+}
+
+.cv-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  font-size: 13px;
+  font-family: var(--font-interface);
+  cursor: pointer;
+}
+
+.cv-picker-item:hover,
+.cv-picker-item--active {
+  background: var(--background-modifier-hover);
+}
+
+.cv-picker-item__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cv-picker-item__right {
+  display: flex;
+  align-items: center;
+}
+
+.cv-picker-item__avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cv-picker-item__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cv-picker-item__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.cv-picker-item__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cv-picker-item__name {
+  font-weight: 500;
+  /* color set inline per agent for mentions */
+}
+
+.cv-picker-item__name--mono {
   color: var(--text-normal);
+  font-family: var(--font-monospace);
+}
+
+.cv-picker-item__desc {
+  color: var(--text-muted);
 }
 
 /* ─── Session modal ──────────────────────────────────────────────────────── */

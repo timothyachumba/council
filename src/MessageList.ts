@@ -1,14 +1,9 @@
-import { MarkdownRenderer, Component, setIcon } from "obsidian";
-import type { PermissionBlock, QuestionBlock } from "./types";
+import { MarkdownRenderer, Component, setIcon, Menu } from "obsidian";
+import type { PermissionBlock, QuestionBlock, StoredEvent } from "./types";
+import { getStatusString } from "./agentStatus";
+import { AGENT_COLORS } from "./agentColors";
 
-const AGENT_THINKING_ACTIONS: Record<string, string[]> = {
-	edge: ["is considering...", "is challenging assumptions...", "is finding counterpoints..."],
-	loom: ["is thinking...", "is finding connections...", "is weaving context..."],
-	ember: ["is exploring...", "is extending the idea...", "is shaping a response..."],
-	quill: ["is composing...", "is finding the words...", "is drafting a response..."],
-};
-
-const THINKING_CYCLE_MS = 3000;
+const THINKING_CYCLE_MS = 6000;
 
 export class MessageList {
 	private container: HTMLElement;
@@ -32,7 +27,7 @@ export class MessageList {
 	// ─── User messages (plain text, no bubble) ────────────────────────────
 
 	/** Append a user message. Top-level messages close any active thread. */
-	appendUserMessage(text: string): void {
+	appendUserMessage(text: string): HTMLElement {
 		// If we're in a thread, the message goes inside it
 		// If not, it's a new top-level thought (and closes any thread)
 		const parent = this.target;
@@ -53,10 +48,8 @@ export class MessageList {
 			const name = match[1];
 			const agentId = name.toLowerCase();
 			const mentionSpan = textEl.createSpan({ cls: "cv-mention", text: `@${name}` });
-			if (this.assetResolver) {
-				const url = this.assetResolver(`assets/${agentId}.png`);
-				mentionSpan.style.backgroundImage = `url("${url}")`;
-			}
+			const color = AGENT_COLORS[agentId];
+			if (color) mentionSpan.style.setProperty("--cv-mention-color", color);
 			lastIndex = match.index + match[0].length;
 		}
 
@@ -67,12 +60,13 @@ export class MessageList {
 		}
 
 		this.scrollToBottom();
+		return el;
 	}
 
 	/** Post a new top-level thought — closes any active thread */
-	appendTopLevelMessage(text: string): void {
+	appendTopLevelMessage(text: string): HTMLElement {
 		this.activeThread = null;
-		this.appendUserMessage(text);
+		return this.appendUserMessage(text);
 	}
 
 	/** Ensure a thread container exists. Creates one with the curved connector if needed. */
@@ -119,13 +113,11 @@ export class MessageList {
 			avatar.style.background = agentColor;
 		}
 
-		const actions = AGENT_THINKING_ACTIONS[agentId] ?? ["is thinking..."];
 		const labelEl = el.createDiv({ cls: "cv-agent-thinking__label" });
 		labelEl.createSpan({ cls: "cv-agent-thinking__name", text: agentName + " " });
 		const actionEl = labelEl.createSpan({ cls: "cv-agent-thinking__action" });
 
 		// Stream in action text character by character
-		let actionIndex = 0;
 		let charIndex = 0;
 		let charInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -144,18 +136,28 @@ export class MessageList {
 			}, 30);
 		};
 
-		streamAction(actions[0]);
+		streamAction(getStatusString(agentId, "idle"));
 
-		// Cycle through actions
-		const interval = setInterval(() => {
-			actionIndex = (actionIndex + 1) % actions.length;
-			streamAction(actions[actionIndex]);
+		// Cycle through idle strings until externally updated
+		let cycleInterval: ReturnType<typeof setInterval> | null = setInterval(() => {
+			streamAction(getStatusString(agentId, "idle"));
 		}, THINKING_CYCLE_MS);
 
+		type ThinkingEl = HTMLElement & { _cleanup?: () => void; _updateStatus?: (text: string) => void };
+
 		// Store cleanup function on element
-		(el as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
-			clearInterval(interval);
+		(el as ThinkingEl)._cleanup = () => {
+			if (cycleInterval) clearInterval(cycleInterval);
 			if (charInterval) clearInterval(charInterval);
+		};
+
+		// Exposed so ChatView can push phase transitions
+		(el as ThinkingEl)._updateStatus = (text: string) => {
+			if (cycleInterval) {
+				clearInterval(cycleInterval);
+				cycleInterval = null;
+			}
+			streamAction(text);
 		};
 
 		this.scrollToBottom();
@@ -166,6 +168,11 @@ export class MessageList {
 	removeAgentThinking(el: HTMLElement): void {
 		(el as HTMLElement & { _cleanup?: () => void })._cleanup?.();
 		el.remove();
+	}
+
+	/** Push a status string update to an active thinking label */
+	updateAgentThinkingStatus(el: HTMLElement, status: string): void {
+		(el as HTMLElement & { _updateStatus?: (text: string) => void })._updateStatus?.(status);
 	}
 
 	// ─── Agent response cards ─────────────────────────────────────────────
@@ -205,7 +212,7 @@ export class MessageList {
 		});
 
 		this.scrollToBottom();
-		return textEl;
+		return card;
 	}
 
 	/** Update the streamed text content of an agent card */
@@ -219,10 +226,27 @@ export class MessageList {
 		this.replyCallback = callback;
 	}
 
+	// ─── Delete (right-click) ─────────────────────────────────────────────
+
+	attachDeleteHandler(el: HTMLElement, onDelete: () => void): void {
+		el.addEventListener("mousedown", (e: MouseEvent) => {
+			if (e.button !== 2) return;
+			e.preventDefault();
+			e.stopPropagation();
+			const menu = new Menu();
+			menu.addItem((item) => {
+				item.setTitle("Delete");
+				item.setIcon("trash");
+				item.onClick(() => onDelete());
+			});
+			menu.showAtMouseEvent(e);
+		});
+	}
+
 	// ─── Permission prompts ────────────────────────────────────────────────
 
 	renderPermission(block: PermissionBlock): HTMLElement {
-		const card = this.container.createDiv({ cls: "cv-permission" });
+		const card = this.target.createDiv({ cls: "cv-permission" });
 
 		const header = card.createDiv({ cls: "cv-permission__header" });
 		const iconEl = header.createDiv({ cls: "cv-permission__icon" });
@@ -382,6 +406,40 @@ export class MessageList {
 		setIcon(iconEl, "alert-circle");
 		el.createSpan({ text: message });
 		this.scrollToBottom();
+	}
+
+	// ─── History replay ────────────────────────────────────────────────────
+
+	replay(
+		events: StoredEvent[],
+		assetResolver?: (path: string) => string,
+		onDelete?: (id: string) => void,
+	): void {
+		for (const event of events) {
+			if (event.type === "user_top") {
+				const el = this.appendTopLevelMessage(event.text);
+				if (onDelete && event.id) {
+					const id = event.id;
+					this.attachDeleteHandler(el, () => {
+						const thread = el.nextElementSibling as HTMLElement | null;
+						el.remove();
+						if (thread?.classList.contains("cv-thread")) thread.remove();
+						onDelete(id);
+					});
+				}
+			} else if (event.type === "user_reply") {
+				this.appendUserMessage(event.text);
+			} else if (event.type === "agent") {
+				const card = this.appendAgentCard(event.agentId, event.agentName, event.agentColor, event.content, assetResolver);
+				if (onDelete && event.id) {
+					const id = event.id;
+					this.attachDeleteHandler(card, () => {
+						card.remove();
+						onDelete(id);
+					});
+				}
+			}
+		}
 	}
 
 	// ─── Utilities ─────────────────────────────────────────────────────────
