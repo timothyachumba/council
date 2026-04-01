@@ -1,7 +1,6 @@
 import { MarkdownRenderer, Component, setIcon, Menu } from "obsidian";
 import type { PermissionBlock, QuestionBlock, StoredEvent } from "./types";
 import { getStatusString } from "./agentStatus";
-import { AGENT_COLORS } from "./agentColors";
 
 const THINKING_CYCLE_MS = 6000;
 

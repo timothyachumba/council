@@ -4,7 +4,6 @@ import * as fs from "fs";
 import * as path from "path";
 import type { ClaudeModel, AgentConfig } from "./types";
 import type { VoiceService } from "./VoiceService";
-import { AGENT_COLORS } from "./agentColors";
 
 const COMMANDS_PATH = path.join(
 	process.env.HOME ?? "/Users/timothyachumba",
