@@ -74,7 +74,7 @@ Auto-detect runs automatically on first plugin load when `claudeCliPath` is null
 - **Read folders** — a list where each row is a path input (relative to vault root) + remove button. "Add folder" appends a new empty row. Empty list = whole vault passed as a single `--add-dir`.
 - **Write destination** — single text input (relative to vault root). Helper text: "Folder will be created if it doesn't exist." Default: `Stream`.
 
-Paths are relative to the Obsidian vault root — easier for users to reason about and vault-portable. The vault root is resolved once in `main.ts` via `this.app.vault.adapter.basePath` and passed to services that need it (ClaudeService, VaultSyncService).
+Paths are relative to the Obsidian vault root — easier for users to reason about and vault-portable. The absolute filesystem path is resolved via `(this.app.vault.adapter as FileSystemAdapter).basePath` (safe since the plugin is desktop-only) and joined with each relative path before being passed to Claude CLI as `--add-dir`.
 
 ### Agents
 
@@ -86,7 +86,7 @@ Paths are relative to the Obsidian vault root — easier for users to reason abo
 
 ## Agent Editor Modal (`src/AgentEditorModal.ts`)
 
-Opens from Edit or Add agent. Standard Obsidian `Modal`.
+Opens from Edit or Add agent. Extends Obsidian `Modal`, renders content in `onOpen()`, cleans up in `onClose()`.
 
 ### Fields
 
@@ -169,7 +169,7 @@ When assembling the prompt for an agent, use `agent.systemPrompt` directly. Remo
 
 ### `VaultSyncService.ts`
 
-Replace hardcoded `VAULT_PATH` with `vaultWriteDir` from settings (resolved against the Obsidian vault root). Before writing, check if the folder exists — create it recursively if not. If `vaultWriteDir` is null or empty, sync is a no-op with a console warning.
+Replace hardcoded `VAULT_PATH` with `vaultWriteDir` from settings (resolved against the Obsidian vault root via `FileSystemAdapter.basePath`). Before writing, check existence with `app.vault.getFolderByPath(vaultWriteDir)` — if null, create with `app.vault.createFolder(vaultWriteDir)`. If `vaultWriteDir` is null or empty, sync is a no-op with a console warning.
 
 ### `main.ts`
 
