@@ -1,6 +1,7 @@
 import { animate } from "motion";
 import { TextMorph } from "torph";
 import type { AgentConfig, AgentState } from "./types";
+import { GRADIENT_PRESETS, gradientToCss } from "./gradientPresets";
 
 // ─── Layout constants ───────────────────────────────────────────────────
 
@@ -83,7 +84,6 @@ export class AgentPanel {
 	private open = false;
 	private containerW = 0;
 	private onSaveCallback: (agents: AgentConfig[]) => void;
-	private assetResolver: ((path: string) => string) | null;
 	private stateCallbacks: Array<(open: boolean) => void> = [];
 	private resizeObserver: ResizeObserver;
 
@@ -98,11 +98,9 @@ export class AgentPanel {
 	constructor(
 		agents: AgentConfig[],
 		onSave: (agents: AgentConfig[]) => void,
-		assetResolver?: (path: string) => string,
 	) {
 		this.agents = agents;
 		this.onSaveCallback = onSave;
-		this.assetResolver = assetResolver ?? null;
 
 		// Avatar group — position:relative container, no flexbox
 		this.avatarGroupEl = createDiv({ cls: "cv-avatar-group" });
@@ -262,16 +260,12 @@ export class AgentPanel {
 
 	// ─── Helpers ─────────────────────────────────────────────────────────
 
-	private applyAvatarImage(el: HTMLElement, index: number): void {
-		const agent = this.agents[index];
-		if (this.assetResolver) {
-			const url = this.assetResolver(`assets/${agent.id}.png`);
-			el.style.backgroundImage = `url("${url}")`;
-			el.style.backgroundSize = "cover";
-			el.style.backgroundPosition = "center";
-		} else {
-			el.style.background = `radial-gradient(circle at 30% 30%, ${agent.color}, color-mix(in srgb, ${agent.color} 60%, black))`;
-		}
+	private applyAvatarImage(el: HTMLElement, i: number): void {
+		const agent = this.agents[i];
+		const preset = GRADIENT_PRESETS[agent.gradientPreset] ?? GRADIENT_PRESETS[0];
+		el.style.backgroundImage = "none";
+		el.style.background = gradientToCss(preset);
+		el.style.backgroundSize = "cover";
 	}
 
 	private resetDrafts(): void {
