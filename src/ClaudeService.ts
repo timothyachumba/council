@@ -1,13 +1,11 @@
 import { spawn, ChildProcess } from "child_process";
 import { EventEmitter } from "events";
-import { realpathSync, mkdtempSync, unlinkSync, rmdirSync } from "fs";
+import { mkdtempSync, unlinkSync, rmdirSync } from "fs";
 import * as path from "path";
 import * as os from "os";
 import { StreamParser } from "./StreamParser";
 import type { StreamEvent, ClaudeModel } from "./types";
 
-const CLAUDE_BIN = "/Users/timothyachumba/.local/bin/claude";
-const VAULT_PATH = realpathSync("/Users/timothyachumba/Vault");
 
 export interface ClaudeServiceEvents {
 	event: (e: StreamEvent) => void;
@@ -24,6 +22,14 @@ export class ClaudeService extends EventEmitter {
 	private parser = new StreamParser();
 	private activeProcess: ChildProcess | null = null;
 
+	constructor(
+		private cliPath: string,
+		private vaultRoot: string,
+		private vaultReadDirs: string[], // absolute paths; if empty, vaultRoot is used
+	) {
+		super();
+	}
+
 	/**
 	 * Send a message to Claude. Spawns a new claude --print process.
 	 * If sessionId is provided, resumes that session; otherwise starts a new one.
@@ -32,14 +38,20 @@ export class ClaudeService extends EventEmitter {
 		// Kill any existing process
 		this.abort();
 
+		const addDirs = this.vaultReadDirs.length > 0 ? this.vaultReadDirs : [this.vaultRoot];
+
 		const args = [
 			"--print",
 			"--output-format", "stream-json",
 			"--verbose",
 			"--include-partial-messages",
-			"--add-dir", VAULT_PATH,
+			"--bare",   // skip hooks, skills, MCP, CLAUDE.md discovery — faster, more deterministic
 			"--model", model,
 		];
+
+		for (const dir of addDirs) {
+			args.push("--add-dir", dir);
+		}
 
 		if (sessionId) {
 			args.push("--resume", sessionId);
@@ -60,7 +72,7 @@ export class ClaudeService extends EventEmitter {
 		const tmpDir = mkdtempSync(path.join(os.tmpdir(), "cv-claude-"));
 		const outFile = path.join(tmpDir, "stream.jsonl");
 
-		console.log("[cv-claude] Spawning via file+tail, cwd:", VAULT_PATH);
+		console.log("[cv-claude] Spawning via file+tail, cwd:", this.vaultRoot);
 
 		// Write args file — one arg per line, read by xargs in the script
 		const argsFile = path.join(tmpDir, "args.txt");
@@ -70,7 +82,7 @@ export class ClaudeService extends EventEmitter {
 		const scriptFile = path.join(tmpDir, "run.sh");
 		writeFileSync(scriptFile, [
 			`#!/bin/bash`,
-			`xargs -0 "${CLAUDE_BIN}" < "${argsFile}" > "${outFile}" 2>&1 &`,
+			`xargs -0 "${this.cliPath}" < "${argsFile}" > "${outFile}" 2>&1 &`,
 			`CLAUDE_PID=$!`,
 			`tail -f "${outFile}" &`,
 			`TAIL_PID=$!`,
@@ -79,7 +91,7 @@ export class ClaudeService extends EventEmitter {
 		].join("\n"));
 
 		const proc = spawn("bash", [scriptFile], {
-			cwd: VAULT_PATH,
+			cwd: this.vaultRoot,
 			env,
 		});
 
