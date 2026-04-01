@@ -4,7 +4,6 @@ import * as path from "path";
 import * as os from "os";
 import type { AgentConfig } from "./types";
 
-const CLAUDE_BIN = "/Users/timothyachumba/.local/bin/claude";
 const RELEVANCE_THRESHOLD = 0.5;
 
 export interface RouteResult {
@@ -14,6 +13,8 @@ export interface RouteResult {
 }
 
 export class AgentRouter {
+	constructor(private cliPath: string) {}
+
 	async route(message: string, watchingAgents: AgentConfig[]): Promise<RouteResult[]> {
 		console.log("[cv-router] Routing message to", watchingAgents.length, "watching agents:", watchingAgents.map(a => a.id));
 		if (watchingAgents.length === 0) return [];
@@ -42,6 +43,7 @@ export class AgentRouter {
 			"--print",
 			"--output-format", "stream-json",
 			"--verbose",
+			"--bare",   // routing call — skip all project config discovery, faster decision
 			"--model", "claude-haiku-4-5-20251001",
 			"--append-system-prompt", systemPrompt,
 			userPrompt,
@@ -56,7 +58,7 @@ export class AgentRouter {
 		writeFileSync(argsFile, args.map((a) => a + "\0").join(""), "utf8");
 		writeFileSync(scriptFile, [
 			`#!/bin/bash`,
-			`xargs -0 "${CLAUDE_BIN}" < "${argsFile}" > "${outFile}" 2>&1 &`,
+			`xargs -0 "${this.cliPath}" < "${argsFile}" > "${outFile}" 2>&1 &`,
 			`CLAUDE_PID=$!`,
 			`tail -f "${outFile}" &`,
 			`TAIL_PID=$!`,
