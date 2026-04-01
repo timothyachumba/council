@@ -344,6 +344,7 @@ Replace the args array construction (currently lines 35–50) with:
 			"--output-format", "stream-json",
 			"--verbose",
 			"--include-partial-messages",
+			"--bare",   // skip hooks, skills, MCP, CLAUDE.md discovery — faster, more deterministic
 			"--model", model,
 		];
 
@@ -426,6 +427,20 @@ export class AgentRouter {
 	constructor(private cliPath: string) {}
 
 	async route(message: string, watchingAgents: AgentConfig[]): Promise<RouteResult[]> {
+```
+
+Also add `"--bare"` to the args array inside `route()` — the routing call never needs hooks, skills, MCP, or project config:
+
+```typescript
+		const args = [
+			"--print",
+			"--output-format", "stream-json",
+			"--verbose",
+			"--bare",   // routing call — skip all project config discovery, faster decision
+			"--model", "claude-haiku-4-5-20251001",
+			"--append-system-prompt", systemPrompt,
+			userPrompt,
+		];
 ```
 
 Update the script generation inside `route()` — replace `"${CLAUDE_BIN}"` with `"${this.cliPath}"`:
@@ -853,6 +868,7 @@ function spawnOneShot(prompt: string, cliPath: string, vaultRoot: string): Promi
 		const args = [
 			"--print",
 			"--output-format", "text",
+			"--bare",   // sync call — skip hooks, skills, MCP, CLAUDE.md discovery
 			"--add-dir", vaultRoot,
 			"--model", "claude-haiku-4-5-20251001",
 			prompt,
