@@ -1095,3 +1095,61 @@
   width: 14px;
   height: 14px;
 }
+
+/* ── Agent editor modal ──────────────────────────────────────────────────── */
+.cv-settings-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 1rem 0 0.4rem;
+}
+
+.cv-gradient-preview {
+  width: 100%;
+  height: 80px;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  border: 2px solid transparent;
+}
+
+.cv-gradient-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 1rem;
+}
+
+.cv-gradient-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.1s ease;
+}
+
+.cv-gradient-swatch:hover {
+  transform: scale(1.08);
+}
+
+.cv-gradient-swatch--selected {
+  border-color: var(--interactive-accent);
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+.cv-prompt-textarea {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  font-family: var(--font-monospace);
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  margin-bottom: 0.5rem;
+}
