@@ -1132,31 +1132,24 @@
   outline-offset: 2px;
 }
 
-.cv-desc-textarea {
+.cv-desc-textarea,
+.cv-prompt-textarea {
   width: 100%;
-  resize: vertical;
-  font-family: var(--font-text);
-  font-size: 0.85rem;
-  padding: 0.5rem;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  background: var(--background-secondary);
+  resize: none;
+  font-size: var(--font-ui-small);
+  padding: 6px 8px;
+  border: var(--input-border-width, 1px) solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--interactive-normal);
+  box-shadow: var(--input-shadow);
   color: var(--text-normal);
   margin-bottom: 0.5rem;
+  box-sizing: border-box;
 }
 
 .cv-prompt-textarea {
-  width: 100%;
   min-height: 180px;
-  resize: vertical;
   font-family: var(--font-monospace);
-  font-size: 0.85rem;
-  padding: 0.5rem;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  background: var(--background-secondary);
-  color: var(--text-normal);
-  margin-bottom: 0.5rem;
 }
 
 /* ── Settings tab ────────────────────────────────────────────────────────── */
