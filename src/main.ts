@@ -6,6 +6,7 @@ import type { CouncilSettings } from "./types";
 import { AGENT_PROMPTS } from "./agentPrompts";
 import { detectClaudeCli } from "./cliDetector";
 import { SettingsTab } from "./SettingsTab";
+import { GRADIENT_PRESETS, gradientToCss } from "./gradientPresets";
 
 export default class CouncilPlugin extends Plugin {
 	settings!: CouncilSettings;
@@ -75,8 +76,7 @@ export default class CouncilPlugin extends Plugin {
 	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<CouncilSettings>);
 
-		// Seed systemPrompt for any agent that doesn't have one yet.
-		// Also clamp gradientPreset to valid range (0–9) in case of stale saved data.
+		// Seed systemPrompt and clamp gradientPreset for each agent.
 		for (const agent of this.settings.agents) {
 			if (!agent.systemPrompt && AGENT_PROMPTS[agent.id]) {
 				agent.systemPrompt = AGENT_PROMPTS[agent.id];
@@ -85,6 +85,23 @@ export default class CouncilPlugin extends Plugin {
 				agent.gradientPreset = agent.gradientPreset % 10;
 			}
 		}
+
+		// Migrate stored chat history: replace old hex agentColor values with
+		// the current gradient CSS so replayed messages show proper avatars.
+		const agentGradientMap = new Map(
+			this.settings.agents.map((a) => [
+				a.id,
+				gradientToCss(GRADIENT_PRESETS[a.gradientPreset] ?? GRADIENT_PRESETS[0]),
+			])
+		);
+		let migrated = false;
+		for (const event of this.settings.chatHistory ?? []) {
+			if (event.type === "agent" && event.agentColor.startsWith("#")) {
+				event.agentColor = agentGradientMap.get(event.agentId) ?? event.agentColor;
+				migrated = true;
+			}
+		}
+		if (migrated) await this.saveData(this.settings);
 	}
 
 	async saveSettings(): Promise<void> {
