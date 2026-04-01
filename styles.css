@@ -1107,29 +1107,29 @@
 }
 
 .cv-gradient-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 1rem;
 }
 
 .cv-gradient-swatch {
-  width: 100%;
-  aspect-ratio: 1;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   cursor: pointer;
-  border: 2px solid transparent;
+  border: none;
+  flex-shrink: 0;
   transition: transform 0.1s ease;
 }
 
 .cv-gradient-swatch:hover {
-  transform: scale(1.08);
+  transform: scale(1.1);
 }
 
 .cv-gradient-swatch--selected {
-  border-color: var(--interactive-accent);
   outline: 2px solid var(--interactive-accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 .cv-prompt-textarea {
