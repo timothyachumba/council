@@ -1,7 +1,7 @@
 // src/AgentEditorModal.ts
 
 import { App, Modal, Setting } from "obsidian";
-import { GRADIENT_PRESETS, gradientToCss, primaryColor } from "./gradientPresets";
+import { GRADIENT_PRESETS, gradientToCss } from "./gradientPresets";
 import type { AgentConfig } from "./types";
 
 export class AgentEditorModal extends Modal {
@@ -39,10 +39,6 @@ export class AgentEditorModal extends Modal {
 		// ── Gradient picker ──────────────────────────────────────────────────
 		contentEl.createEl("p", { text: "Gradient", cls: "cv-settings-label" });
 
-		// Large preview swatch
-		const preview = contentEl.createDiv({ cls: "cv-gradient-preview" });
-		this.updatePreview(preview);
-
 		// Grid of 20 swatches
 		const grid = contentEl.createDiv({ cls: "cv-gradient-grid" });
 		GRADIENT_PRESETS.forEach((preset) => {
@@ -52,12 +48,10 @@ export class AgentEditorModal extends Modal {
 				swatch.addClass("cv-gradient-swatch--selected");
 			}
 			swatch.addEventListener("click", () => {
-				// Deselect all, select this
 				grid.querySelectorAll(".cv-gradient-swatch--selected")
 					.forEach((el) => el.removeClass("cv-gradient-swatch--selected"));
 				swatch.addClass("cv-gradient-swatch--selected");
 				this.draft.gradientPreset = preset.id;
-				this.updatePreview(preview);
 			});
 		});
 
@@ -115,11 +109,5 @@ export class AgentEditorModal extends Modal {
 
 	onClose(): void {
 		this.contentEl.empty();
-	}
-
-	private updatePreview(preview: HTMLElement): void {
-		const preset = GRADIENT_PRESETS[this.draft.gradientPreset] ?? GRADIENT_PRESETS[0];
-		preview.style.background = gradientToCss(preset);
-		preview.style.borderColor = primaryColor(preset);
 	}
 }

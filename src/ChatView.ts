@@ -61,6 +61,11 @@ export class ChatView extends ItemView {
 	getDisplayText(): string { return "Claude"; }
 	getIcon(): string { return "message-square"; }
 
+	/** Called by SettingsTab after agent changes to refresh the carousel live. */
+	refreshAgents(): void {
+		this.agentPanel.setAgents(this.settings.agents);
+	}
+
 	async onOpen(): Promise<void> {
 		const vaultRoot = (this.app.vault.adapter as FileSystemAdapter).basePath;
 		const cliPath = this.settings.claudeCliPath ?? "";

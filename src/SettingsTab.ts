@@ -1,11 +1,12 @@
 // src/SettingsTab.ts
 
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
-import { GRADIENT_PRESETS, gradientToCss, primaryColor } from "./gradientPresets";
+import { GRADIENT_PRESETS, gradientToCss } from "./gradientPresets";
 import { AgentEditorModal } from "./AgentEditorModal";
 import { detectClaudeCli } from "./cliDetector";
 import type { CouncilSettings } from "./types";
 import type CouncilPlugin from "./main";
+import type { ChatView } from "./ChatView";
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: CouncilPlugin;
@@ -117,6 +118,13 @@ export class SettingsTab extends PluginSettingTab {
 		this.renderAgents(agentsContainer);
 	}
 
+	private notifyChatView(): void {
+		const leaves = this.app.workspace.getLeavesOfType("council:chat");
+		for (const leaf of leaves) {
+			(leaf.view as ChatView).refreshAgents?.();
+		}
+	}
+
 	private updateCliStatus(el: HTMLElement, cliPath: string | null): void {
 		el.empty();
 		if (cliPath) {
@@ -160,7 +168,6 @@ export class SettingsTab extends PluginSettingTab {
 			const swatch = row.createDiv({ cls: "cv-settings-agent-swatch" });
 			const preset = GRADIENT_PRESETS[agent.gradientPreset] ?? GRADIENT_PRESETS[0];
 			swatch.style.background = gradientToCss(preset);
-			swatch.style.borderColor = primaryColor(preset);
 
 			// Name
 			row.createSpan({ text: agent.name, cls: "cv-settings-agent-name" });
@@ -172,6 +179,7 @@ export class SettingsTab extends PluginSettingTab {
 					this.plugin.settings.agents[i] = updated;
 					await this.plugin.saveSettings();
 					this.renderAgents(container);
+					this.notifyChatView();
 				}).open();
 			});
 
@@ -181,6 +189,7 @@ export class SettingsTab extends PluginSettingTab {
 				this.plugin.settings.agents.splice(i, 1);
 				await this.plugin.saveSettings();
 				this.renderAgents(container);
+				this.notifyChatView();
 			});
 		});
 
@@ -193,6 +202,7 @@ export class SettingsTab extends PluginSettingTab {
 				this.plugin.settings.agents.push(newAgent);
 				await this.plugin.saveSettings();
 				this.renderAgents(container);
+				this.notifyChatView();
 			}).open();
 		});
 	}

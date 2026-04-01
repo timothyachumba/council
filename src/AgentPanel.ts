@@ -258,6 +258,30 @@ export class AgentPanel {
 		});
 	}
 
+	// ─── Public API ──────────────────────────────────────────────────────
+
+	/**
+	 * Update the agents list and refresh gradients in place.
+	 * Called by ChatView when settings change externally (e.g. via SettingsTab).
+	 */
+	setAgents(agents: AgentConfig[]): void {
+		const countChanged = agents.length !== this.agents.length;
+		this.agents = agents;
+		this.resetDrafts();
+
+		if (countChanged) {
+			// Full rebuild needed — count changed
+			this.avatarGroupEl.empty();
+			this.avatarEls = [];
+			this.buildAvatars();
+			this.positionAvatars(false);
+		} else {
+			// Just re-apply gradients to existing elements
+			this.avatarEls.forEach((el, i) => this.applyAvatarImage(el, i));
+		}
+		this.syncAvatarFilters();
+	}
+
 	// ─── Helpers ─────────────────────────────────────────────────────────
 
 	private applyAvatarImage(el: HTMLElement, i: number): void {
