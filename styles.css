@@ -255,8 +255,8 @@
 }
 
 .cv-agent-thinking__avatar {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   flex-shrink: 0;
   flex-shrink: 0;
@@ -310,8 +310,8 @@
 }
 
 .cv-agent-card__avatar {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   flex-shrink: 0;
 }
