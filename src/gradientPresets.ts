@@ -7,21 +7,33 @@ export interface GradientPreset {
 	positions: [[number, number], [number, number], [number, number], [number, number]];
 }
 
+/** Converts a hex color to rgba with alpha 0.
+ *  This prevents the grey desaturation that occurs when CSS fades to `transparent`
+ *  (which is rgba(0,0,0,0) — it blends through desaturated grey at midpoints). */
+function toRgba0(hex: string): string {
+	const r = parseInt(hex.slice(1, 3), 16);
+	const g = parseInt(hex.slice(3, 5), 16);
+	const b = parseInt(hex.slice(5, 7), 16);
+	return `rgba(${r},${g},${b},0)`;
+}
+
 /**
- * Renders a gradient preset as a CSS `background` string.
- * C1 is the solid base fill — it defines the dominant visual identity.
- * C2–C4 are derived companions that create interesting blends over C1.
+ * Renders a preset as a CSS `background` string approximating a mesh gradient.
+ *
+ * Each blob fades to rgba(r,g,b,0) — not `transparent` — so the hue stays vivid
+ * through the blend zone. Large overlapping ellipses (~120%) ensure heavy coverage.
+ * The base is a diagonal linear-gradient between C1 and C3 so uncovered areas
+ * still show smooth colour rather than a flat fill.
  */
 export function gradientToCss(preset: GradientPreset): string {
 	const [c1, c2, c3, c4] = preset.colors;
 	const [p1, p2, p3, p4] = preset.positions;
 	return [
-		`radial-gradient(circle at ${p1[0]}% ${p1[1]}%, ${c1} 0%, transparent 62%)`,
-		`radial-gradient(circle at ${p2[0]}% ${p2[1]}%, ${c2} 0%, transparent 57%)`,
-		`radial-gradient(circle at ${p3[0]}% ${p3[1]}%, ${c3} 0%, transparent 65%)`,
-		`radial-gradient(circle at ${p4[0]}% ${p4[1]}%, ${c4} 0%, transparent 52%)`,
-		// solid base fill as a valid gradient (bare hex in background shorthand list is invalid CSS)
-		`radial-gradient(circle, ${c1} 0%, ${c1} 100%)`,
+		`radial-gradient(ellipse 120% 110% at ${p1[0]}% ${p1[1]}%, ${c1} 0%, ${toRgba0(c1)} 65%)`,
+		`radial-gradient(ellipse 110% 120% at ${p2[0]}% ${p2[1]}%, ${c2} 0%, ${toRgba0(c2)} 60%)`,
+		`radial-gradient(ellipse 120% 120% at ${p3[0]}% ${p3[1]}%, ${c3} 0%, ${toRgba0(c3)} 70%)`,
+		`radial-gradient(ellipse 100% 120% at ${p4[0]}% ${p4[1]}%, ${c4} 0%, ${toRgba0(c4)} 55%)`,
+		`linear-gradient(135deg, ${c1}, ${c3})`,
 	].join(", ");
 }
 
