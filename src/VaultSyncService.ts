@@ -1,11 +1,9 @@
 import { spawn } from "child_process";
-import { mkdtempSync, writeFileSync, unlinkSync, rmdirSync, realpathSync } from "fs";
+import { mkdtempSync, writeFileSync, unlinkSync, rmdirSync, mkdirSync } from "fs";
 import * as path from "path";
 import * as os from "os";
 import type { StoredEvent } from "./types";
 
-const CLAUDE_BIN = "/Users/timothyachumba/.local/bin/claude";
-const VAULT_PATH = realpathSync("/Users/timothyachumba/Vault");
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 const MIN_USER_MESSAGES = 2; // don't sync single-message exchanges
 
@@ -17,6 +15,9 @@ export class VaultSyncService {
 		private getHistory: () => StoredEvent[],
 		private getLastSavedIndex: () => number,
 		private onSaved: (newIndex: number) => void,
+		private cliPath: string,
+		private vaultRoot: string,
+		private vaultWriteDir: string,
 	) {}
 
 	/** Call on every user send — resets the idle countdown */
@@ -56,9 +57,13 @@ export class VaultSyncService {
 		console.log("[cv-vault-sync] Starting sync. Events to process:", unsaved.length);
 
 		try {
+			// Ensure write dir exists
+			const writePath = path.join(this.vaultRoot, this.vaultWriteDir);
+			mkdirSync(writePath, { recursive: true });
+
 			const transcript = formatTranscript(unsaved);
-			const prompt = buildPrompt(transcript);
-			await spawnOneShot(prompt);
+			const prompt = buildPrompt(transcript, this.vaultRoot, this.vaultWriteDir);
+			await spawnOneShot(prompt, this.cliPath, this.vaultRoot);
 			this.onSaved(history.length);
 			console.log("[cv-vault-sync] Sync complete. New savedIndex:", history.length);
 		} catch (err) {
@@ -87,7 +92,7 @@ function formatTranscript(events: StoredEvent[]): string {
 
 // ─── Prompt ───────────────────────────────────────────────────────────────────
 
-function buildPrompt(transcript: string): string {
+function buildPrompt(transcript: string, vaultRoot: string, vaultWriteDir: string): string {
 	const now = new Date();
 	const date = now.toISOString().slice(0, 10);
 	const time = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }).replace(":", "");
@@ -97,6 +102,7 @@ function buildPrompt(transcript: string): string {
 	const hour12 = hour % 12 || 12;
 	const min = String(now.getMinutes()).padStart(2, "0");
 	const streamTime = `${hour12}:${min}${ampm}`;
+	const writeDir = path.join(vaultRoot, vaultWriteDir);
 
 	return `You are capturing thinking from a council session into the knowledge base. Today is ${date}, time is ${timeFormatted}.
 
@@ -116,7 +122,7 @@ If this transcript is purely mechanical, too thin (less than 2 substantive excha
 ## Step 2: Write stream entries
 For each substantive insight, evolved position, or meaningful connection that emerged:
 
-Append to \`~/Vault/Stream/${date}.md\` (create the day-file with standard frontmatter if it doesn't exist):
+Append to \`${writeDir}/${date}.md\` (create the day-file with standard frontmatter if it doesn't exist):
 
 \`\`\`
 ---
@@ -157,12 +163,13 @@ Do not write session files — only stream entries, thread routing, and memory i
 
 // ─── One-shot Claude invocation ───────────────────────────────────────────────
 
-function spawnOneShot(prompt: string): Promise<void> {
+function spawnOneShot(prompt: string, cliPath: string, vaultRoot: string): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const args = [
 			"--print",
 			"--output-format", "text",
-			"--add-dir", VAULT_PATH,
+			"--bare",   // sync call — skip hooks, skills, MCP, CLAUDE.md discovery
+			"--add-dir", vaultRoot,
 			"--model", "claude-haiku-4-5-20251001",
 			prompt,
 		];
@@ -179,10 +186,10 @@ function spawnOneShot(prompt: string): Promise<void> {
 		writeFileSync(argsFile, args.map((a) => a + "\0").join(""), "utf8");
 		writeFileSync(scriptFile, [
 			`#!/bin/bash`,
-			`xargs -0 "${CLAUDE_BIN}" < "${argsFile}" > "${outFile}" 2>&1`,
+			`xargs -0 "${cliPath}" < "${argsFile}" > "${outFile}" 2>&1`,
 		].join("\n"));
 
-		const proc = spawn("bash", [scriptFile], { cwd: VAULT_PATH, env });
+		const proc = spawn("bash", [scriptFile], { cwd: vaultRoot, env });
 
 		proc.on("close", (code) => {
 			// Log the output for debugging
