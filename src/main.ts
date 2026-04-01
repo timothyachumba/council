@@ -1,19 +1,19 @@
-import { Plugin } from "obsidian";
+import { Plugin, Notice } from "obsidian";
 import { ChatView, CHAT_VIEW_TYPE } from "./ChatView";
-import { ClaudeService } from "./ClaudeService";
 import { SessionStore } from "./SessionStore";
 import { DEFAULT_SETTINGS } from "./types";
 import type { CouncilSettings } from "./types";
+import { AGENT_PROMPTS } from "./agentPrompts";
+import { detectClaudeCli } from "./cliDetector";
+import { SettingsTab } from "./SettingsTab";
 
 export default class CouncilPlugin extends Plugin {
 	settings!: CouncilSettings;
-	private claude!: ClaudeService;
 	private sessionStore!: SessionStore;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		this.claude = new ClaudeService();
 		this.sessionStore = new SessionStore();
 
 		// Register the chat view
@@ -22,13 +22,15 @@ export default class CouncilPlugin extends Plugin {
 				leaf,
 				this.settings,
 				() => this.saveSettings(),
-				this.claude,
 				this.sessionStore,
 			);
 		});
 
+		// Settings tab
+		this.addSettingTab(new SettingsTab(this.app, this));
+
 		// Ribbon icon
-		this.addRibbonIcon("message-square", "Claude", () => {
+		this.addRibbonIcon("message-square", "Council", () => {
 			void this.activateChatView();
 		});
 
@@ -45,11 +47,23 @@ export default class CouncilPlugin extends Plugin {
 			callback: () => void this.newChat(),
 		});
 
+		// Auto-detect Claude CLI if not already set
+		if (!this.settings.claudeCliPath) {
+			detectClaudeCli().then(async (found) => {
+				if (found) {
+					this.settings.claudeCliPath = found;
+					await this.saveSettings();
+					console.log("[cv] Claude CLI found at:", found);
+				} else {
+					new Notice("Council: Claude CLI not found. Set the path in plugin settings.");
+				}
+			}).catch(console.error);
+		}
+
 		// Restore view in right sidebar if it was previously open
 		this.app.workspace.onLayoutReady(() => {
 			const existing = this.app.workspace.getLeavesOfType(CHAT_VIEW_TYPE);
 			if (existing.length === 0) return;
-			// Already exists — just reveal it
 			this.app.workspace.revealLeaf(existing[0]);
 		});
 	}
@@ -60,6 +74,13 @@ export default class CouncilPlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<CouncilSettings>);
+
+		// Seed systemPrompt for any agent that doesn't have one yet
+		for (const agent of this.settings.agents) {
+			if (!agent.systemPrompt && AGENT_PROMPTS[agent.id]) {
+				agent.systemPrompt = AGENT_PROMPTS[agent.id];
+			}
+		}
 	}
 
 	async saveSettings(): Promise<void> {
