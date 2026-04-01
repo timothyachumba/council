@@ -107,18 +107,12 @@ export class MessageList {
 		agentId: string,
 		agentName: string,
 		agentColor: string,
-		assetResolver?: (path: string) => string,
 	): HTMLElement {
 		const thread = this.ensureThread();
 		const el = thread.createDiv({ cls: "cv-agent-thinking" });
 
 		const avatar = el.createDiv({ cls: "cv-agent-thinking__avatar" });
-		if (assetResolver) {
-			const url = assetResolver(`assets/${agentId}.png`);
-			avatar.style.backgroundImage = `url("${url}")`;
-		} else {
-			avatar.style.background = agentColor;
-		}
+		avatar.style.background = agentColor;
 
 		const labelEl = el.createDiv({ cls: "cv-agent-thinking__label" });
 		labelEl.createSpan({ cls: "cv-agent-thinking__name", text: agentName + " " });
@@ -190,7 +184,6 @@ export class MessageList {
 		agentName: string,
 		agentColor: string,
 		content: string,
-		assetResolver?: (path: string) => string,
 	): HTMLElement {
 		const thread = this.ensureThread();
 		const card = thread.createDiv({ cls: "cv-agent-card" });
@@ -205,12 +198,7 @@ export class MessageList {
 
 		const identity = footer.createDiv({ cls: "cv-agent-card__identity" });
 		const avatar = identity.createDiv({ cls: "cv-agent-card__avatar" });
-		if (assetResolver) {
-			const url = assetResolver(`assets/${agentId}.png`);
-			avatar.style.backgroundImage = `url("${url}")`;
-		} else {
-			avatar.style.background = agentColor;
-		}
+		avatar.style.background = agentColor;
 		identity.createDiv({ cls: "cv-agent-card__name", text: agentName });
 
 		const replyBtn = footer.createDiv({ cls: "cv-agent-card__action", text: "Reply" });
