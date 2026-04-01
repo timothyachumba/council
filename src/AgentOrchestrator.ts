@@ -1,7 +1,7 @@
 import { EventEmitter } from "events";
 import { ClaudeService } from "./ClaudeService";
 import { AgentRouter } from "./AgentRouter";
-import { AGENT_PROMPTS } from "./agentPrompts";
+import { GRADIENT_PRESETS, primaryColor } from "./gradientPresets";
 import type { AgentConfig, ClaudeModel, StreamEvent } from "./types";
 
 export interface AgentEvent {
@@ -24,7 +24,7 @@ export declare interface AgentOrchestrator {
 const MENTION_RE = /@(\w+)/gi;
 
 export class AgentOrchestrator extends EventEmitter {
-	private router = new AgentRouter();
+	private router: AgentRouter;
 	private agentServices = new Map<string, ClaudeService>();
 	private _isActive = false;
 	private agentSessions: Record<string, string | null>;
@@ -33,10 +33,14 @@ export class AgentOrchestrator extends EventEmitter {
 	constructor(
 		agentSessions: Record<string, string | null>,
 		onSessionUpdate: (agentId: string, sessionId: string) => void,
+		private cliPath: string,
+		private vaultRoot: string,
+		private vaultReadDirs: string[],
 	) {
 		super();
 		this.agentSessions = agentSessions;
 		this.onSessionUpdate = onSessionUpdate;
+		this.router = new AgentRouter(cliPath);
 	}
 
 	isActive(): boolean {
@@ -114,15 +118,14 @@ export class AgentOrchestrator extends EventEmitter {
 		return new Promise((resolve) => {
 			let service = this.agentServices.get(agent.id);
 			if (!service) {
-				service = new ClaudeService();
+				service = new ClaudeService(this.cliPath, this.vaultRoot, this.vaultReadDirs);
 				this.agentServices.set(agent.id, service);
 			}
 
-			const basePrompt = AGENT_PROMPTS[agent.id] ?? `You are ${agent.name}. ${agent.description}. Keep responses concise, opinionated, and true to your role.`;
-			const systemPrompt = agent.prompt
-				? `${basePrompt}\n\nAdditional focus: ${agent.prompt}`
-				: basePrompt;
+			const systemPrompt = agent.systemPrompt
+				|| `You are ${agent.name}. ${agent.description}. Keep responses concise, opinionated, and true to your role.`;
 
+			const agentColor = primaryColor(GRADIENT_PRESETS[agent.gradientPreset] ?? GRADIENT_PRESETS[0]);
 			const sessionId = this.agentSessions[agent.id] ?? null;
 			console.log(`[cv-agent:${agent.id}] Starting — session: ${sessionId ?? "new"}, model: ${model}`);
 			console.log(`[cv-agent:${agent.id}] System prompt:`, systemPrompt.slice(0, 120) + "...");
@@ -131,7 +134,7 @@ export class AgentOrchestrator extends EventEmitter {
 			this.emit("agent-event", {
 				agentId: agent.id,
 				agentName: agent.name,
-				agentColor: agent.color,
+				agentColor,
 				event: { type: "thinking", content: "", partial: false } as StreamEvent,
 			});
 
@@ -148,7 +151,7 @@ export class AgentOrchestrator extends EventEmitter {
 				this.emit("agent-event", {
 					agentId: agent.id,
 					agentName: agent.name,
-					agentColor: agent.color,
+					agentColor,
 					event,
 				});
 			};
