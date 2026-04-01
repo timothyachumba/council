@@ -96,7 +96,8 @@ export default class CouncilPlugin extends Plugin {
 		);
 		let migrated = false;
 		for (const event of this.settings.chatHistory ?? []) {
-			if (event.type === "agent" && event.agentColor.startsWith("#")) {
+			// Migrate any stored event that isn't already a gradient CSS string
+		if (event.type === "agent" && !event.agentColor.startsWith("radial-gradient")) {
 				event.agentColor = agentGradientMap.get(event.agentId) ?? event.agentColor;
 				migrated = true;
 			}
