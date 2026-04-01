@@ -20,7 +20,8 @@ export function gradientToCss(preset: GradientPreset): string {
 		`radial-gradient(circle at ${p2[0]}% ${p2[1]}%, ${c2} 0%, transparent 57%)`,
 		`radial-gradient(circle at ${p3[0]}% ${p3[1]}%, ${c3} 0%, transparent 65%)`,
 		`radial-gradient(circle at ${p4[0]}% ${p4[1]}%, ${c4} 0%, transparent 52%)`,
-		c1,
+		// solid base fill as a valid gradient (bare hex in background shorthand list is invalid CSS)
+		`radial-gradient(circle, ${c1} 0%, ${c1} 100%)`,
 	].join(", ");
 }
 
