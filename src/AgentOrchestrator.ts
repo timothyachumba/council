@@ -1,7 +1,7 @@
 import { EventEmitter } from "events";
 import { ClaudeService } from "./ClaudeService";
 import { AgentRouter } from "./AgentRouter";
-import { GRADIENT_PRESETS, primaryColor } from "./gradientPresets";
+import { GRADIENT_PRESETS, gradientToCss, primaryColor } from "./gradientPresets";
 import type { AgentConfig, ClaudeModel, StreamEvent } from "./types";
 
 export interface AgentEvent {
@@ -125,7 +125,7 @@ export class AgentOrchestrator extends EventEmitter {
 			const systemPrompt = agent.systemPrompt
 				|| `You are ${agent.name}. ${agent.description}. Keep responses concise, opinionated, and true to your role.`;
 
-			const agentColor = primaryColor(GRADIENT_PRESETS[agent.gradientPreset] ?? GRADIENT_PRESETS[0]);
+			const agentColor = gradientToCss(GRADIENT_PRESETS[agent.gradientPreset] ?? GRADIENT_PRESETS[0]);
 			const sessionId = this.agentSessions[agent.id] ?? null;
 			console.log(`[cv-agent:${agent.id}] Starting — session: ${sessionId ?? "new"}, model: ${model}`);
 			console.log(`[cv-agent:${agent.id}] System prompt:`, systemPrompt.slice(0, 120) + "...");
