@@ -4,6 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 import type { ClaudeModel, AgentConfig } from "./types";
 import type { VoiceService } from "./VoiceService";
+import { GRADIENT_PRESETS, primaryColor } from "./gradientPresets";
 
 const COMMANDS_PATH = path.join(
 	process.env.HOME ?? "/Users/timothyachumba",
@@ -327,7 +328,7 @@ export class InputBar {
 						});
 					}
 					const name = el.createSpan({ cls: "cv-picker-item__name", text: agent.name });
-					name.style.color = AGENT_COLORS[agent.id] ?? agent.color;
+					name.style.color = primaryColor(GRADIENT_PRESETS[agent.gradientPreset] ?? GRADIENT_PRESETS[0]);
 				},
 				renderRight: (el: HTMLElement) => {
 					el.createSpan({ cls: "cv-picker-item__desc", text: agent.description });
