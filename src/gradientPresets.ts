@@ -4,21 +4,13 @@ export interface GradientPreset {
 	id: number;
 	colors: [string, string, string, string];
 	// Seed positions as [x%, y%] — controls where each color blob is anchored.
-	// Varying these per-preset creates the organic, flowing mesh shapes.
 	positions: [[number, number], [number, number], [number, number], [number, number]];
 }
 
 /**
  * Renders a gradient preset as a CSS `background` string.
- * Four radial blobs at unique seed positions blend into a mesh gradient.
- * The first color also fills the base to prevent transparent gaps.
- *
- * Color selection rules followed:
- * - All 4 colors in the same lightness band (no mixing dark anchors with light accents)
- * - At least one warm/cool hue crossing per palette
- * - 60-120° total hue arc minimum — no monochromatic palettes
- * - Varied saturation: dominant at 85%, secondary 70%, accent 60%
- * - "Unexpected" fourth color per palette for the memorable tension point
+ * C1 is the solid base fill — it defines the dominant visual identity of the swatch.
+ * The other three colors bloom as radial blobs over the top.
  */
 export function gradientToCss(preset: GradientPreset): string {
 	const [c1, c2, c3, c4] = preset.colors;
@@ -28,7 +20,7 @@ export function gradientToCss(preset: GradientPreset): string {
 		`radial-gradient(circle at ${p2[0]}% ${p2[1]}%, ${c2} 0%, transparent 57%)`,
 		`radial-gradient(circle at ${p3[0]}% ${p3[1]}%, ${c3} 0%, transparent 65%)`,
 		`radial-gradient(circle at ${p4[0]}% ${p4[1]}%, ${c4} 0%, transparent 52%)`,
-		c1, // solid base — prevents transparency gaps
+		c1, // solid base — C1 defines the dominant identity
 	].join(", ");
 }
 
@@ -40,149 +32,139 @@ export function primaryColor(preset: GradientPreset): string {
 	return preset.colors[0];
 }
 
-// 20 curated presets — indices 0–3 align with default agent identities.
-// Colors are all Tailwind-600-equivalent vibrancy (L:44–50 HSL, S:75–90%).
-// Each palette has warm/cool crossing and one "unexpected" fourth color.
+// 20 presets across 5 visual families, 4 per family, interleaved so the
+// 10-column picker (rows of 10) alternates: BLUE·ORANGE·PURPLE·TEAL·PINK·BLUE·ORANGE·PURPLE·TEAL·PINK
+//
+// Row 1 (0–9):  blue · orange · purple · teal · pink · blue · orange · purple · teal · pink
+// Row 2 (10–19): blue · orange · purple · teal · pink · blue · orange · purple · teal · pink
+//
+// Indices 0–3 are the default agent identities — one per distinct family.
+// C1 always defines the swatch identity (it's also the solid base fill).
 export const GRADIENT_PRESETS: GradientPreset[] = [
-	// 0 · Cobalt Surge — Edge (blue + violet + hot pink + amber)
-	// Warm/cool: blue+violet vs pink+amber. Unexpected: amber against the blue family.
-	// Emergent: blue×violet→indigo, violet×pink→magenta.
+
+	// ── Row 1 ──────────────────────────────────────────────────────────────────
+
+	// 0 · Cobalt — Edge (BLUE: deep blue + indigo + hot pink + amber)
 	{
 		id: 0,
-		colors: ["#2563EB", "#7C3AED", "#DB2777", "#D97706"],
+		colors: ["#1D4ED8", "#4F46E5", "#EC4899", "#F59E0B"],
 		positions: [[15, 25], [75, 15], [80, 75], [20, 80]],
 	},
-	// 1 · Terra Flare — Loom (orange + rose + cobalt + emerald)
-	// Warm dominant with two cool surprises. Emergent: orange×rose→coral, blue×green→teal.
+	// 1 · Terra — Loom (ORANGE: burnt orange + gold + violet + sky)
 	{
 		id: 1,
-		colors: ["#EA580C", "#E11D48", "#2563EB", "#16A34A"],
+		colors: ["#EA580C", "#EAB308", "#7C3AED", "#0EA5E9"],
 		positions: [[20, 75], [75, 20], [85, 80], [10, 15]],
 	},
-	// 2 · Ember Violet — Ember (purple + fuchsia + ocean + gold)
-	// Split-complementary: purple + fuchsia, then cyan + gold as pivot. Unexpected: gold.
+	// 2 · Ember — Ember (PURPLE: violet + fuchsia + cyan + amber)
 	{
 		id: 2,
-		colors: ["#9333EA", "#C026D3", "#0891B2", "#CA8A04"],
+		colors: ["#9333EA", "#C026D3", "#06B6D4", "#F59E0B"],
 		positions: [[5, 35], [80, 10], [60, 80], [30, 70]],
 	},
-	// 3 · Canopy — Quill (teal + green + rose + sky)
-	// Botanical analogous (teal+green), rose as warm tension, sky as unexpected coolness.
+	// 3 · Canopy — Quill (TEAL: teal + emerald + rose + sky)
 	{
 		id: 3,
 		colors: ["#0D9488", "#16A34A", "#E11D48", "#0284C7"],
 		positions: [[20, 20], [75, 35], [85, 85], [10, 75]],
 	},
-	// 4 · Inferno — red + orange + indigo + cyan
-	// Fire dominant, then indigo+cyan as the cold surprise. Diagonal contrast max.
+	// 4 · Flamingo (PINK: hot pink + rose + cobalt + emerald)
 	{
 		id: 4,
-		colors: ["#DC2626", "#EA580C", "#4F46E5", "#0891B2"],
+		colors: ["#EC4899", "#F43F5E", "#1D4ED8", "#10B981"],
 		positions: [[85, 85], [20, 75], [10, 10], [80, 15]],
 	},
-	// 5 · Cold Front — sky + blue + violet + amber
-	// Cool analogous trio, amber as the unexpected warmth. Classic "space" look.
+	// 5 · Arctic (BLUE: sky + cobalt + violet + gold)
 	{
 		id: 5,
-		colors: ["#0284C7", "#2563EB", "#7C3AED", "#D97706"],
+		colors: ["#0EA5E9", "#2563EB", "#8B5CF6", "#FBBF24"],
 		positions: [[5, 5], [80, 30], [30, 85], [85, 80]],
 	},
-	// 6 · Wildflower — fuchsia + pink + green + cobalt
-	// Vivid warm+cool crossing. Green is the unexpected note against the pink/fuchsia duo.
+	// 6 · Solstice (ORANGE: amber + gold + indigo + teal)
 	{
 		id: 6,
-		colors: ["#C026D3", "#DB2777", "#16A34A", "#2563EB"],
+		colors: ["#D97706", "#F59E0B", "#4F46E5", "#0D9488"],
 		positions: [[70, 20], [15, 70], [80, 75], [30, 15]],
 	},
-	// 7 · Solaris — orange + gold + violet + teal
-	// Warm pair (orange+gold) vs cool pair (violet+teal). Classic split-complementary.
+	// 7 · Dusk (PURPLE: deep violet + purple + rose + teal)
 	{
 		id: 7,
-		colors: ["#EA580C", "#CA8A04", "#9333EA", "#0D9488"],
+		colors: ["#6D28D9", "#9333EA", "#F43F5E", "#0D9488"],
 		positions: [[80, 80], [20, 15], [60, 40], [10, 85]],
 	},
-	// 8 · Cascade — blue + cyan + rose + amber
-	// Aquatic duo (blue+cyan), rose for warmth, amber as the golden anchor.
+	// 8 · Lagoon (TEAL: cyan + teal + violet + amber)
 	{
 		id: 8,
-		colors: ["#2563EB", "#0891B2", "#E11D48", "#D97706"],
+		colors: ["#06B6D4", "#0D9488", "#7C3AED", "#F59E0B"],
 		positions: [[50, 10], [85, 60], [25, 85], [10, 30]],
 	},
-	// 9 · Phantom — violet + cobalt + fuchsia + teal
-	// Rich jewel tones. All within 120° arc. Unexpected: teal as the "exhale."
+	// 9 · Fuchsia (PINK: fuchsia + violet + cyan + gold)
 	{
 		id: 9,
-		colors: ["#7C3AED", "#2563EB", "#C026D3", "#0D9488"],
+		colors: ["#C026D3", "#7C3AED", "#06B6D4", "#F59E0B"],
 		positions: [[80, 20], [10, 80], [85, 75], [20, 15]],
 	},
-	// 10 · Helix — sky + fuchsia + amber + indigo
-	// Four-way tension. Indigo+sky cool frame, fuchsia+amber warm explosions.
+
+	// ── Row 2 ──────────────────────────────────────────────────────────────────
+
+	// 10 · Nocturn (BLUE: midnight + violet + rose + teal)
 	{
 		id: 10,
-		colors: ["#0284C7", "#C026D3", "#D97706", "#4F46E5"],
+		colors: ["#1E40AF", "#5B21B6", "#F43F5E", "#0D9488"],
 		positions: [[20, 15], [80, 20], [75, 80], [15, 80]],
 	},
-	// 11 · Citrus Circuit — orange + lime-green + violet + sky
-	// Complementary: orange vs blue-violet. Green as unexpected organic note.
+	// 11 · Inferno (ORANGE: red + orange + indigo + cyan)
 	{
 		id: 11,
-		colors: ["#EA580C", "#65A30D", "#9333EA", "#0284C7"],
+		colors: ["#DC2626", "#F97316", "#4F46E5", "#06B6D4"],
 		positions: [[5, 5], [85, 80], [80, 15], [10, 75]],
 	},
-	// 12 · Coral Reef — rose + teal + violet + gold
-	// Triadic warm pivot. Rose+teal are far-split, violet bridges, gold anchors warmth.
+	// 12 · Ultraviolet (PURPLE: indigo + violet + pink + gold)
 	{
 		id: 12,
-		colors: ["#E11D48", "#0D9488", "#7C3AED", "#D97706"],
+		colors: ["#4F46E5", "#A855F7", "#EC4899", "#F59E0B"],
 		positions: [[75, 25], [20, 75], [80, 80], [15, 15]],
 	},
-	// 13 · Arctic Bloom — cyan + pink + indigo + green
-	// Ice-cool (cyan+indigo) meets hot-bloom (pink+green). Wide arc, bridged by blue.
+	// 13 · Jungle (TEAL: emerald + lime + fuchsia + sky)
 	{
 		id: 13,
-		colors: ["#0891B2", "#DB2777", "#4F46E5", "#16A34A"],
+		colors: ["#059669", "#65A30D", "#C026D3", "#0EA5E9"],
 		positions: [[20, 80], [80, 80], [15, 20], [75, 15]],
 	},
-	// 14 · Amber Storm — gold + red + violet + ocean
-	// Warm anchor (gold+red), violet as the pivot, ocean as the cold exhale.
+	// 14 · Rose Gold (PINK: rose + pink + violet + gold)
 	{
 		id: 14,
-		colors: ["#D97706", "#DC2626", "#7C3AED", "#0891B2"],
+		colors: ["#E11D48", "#EC4899", "#7C3AED", "#D97706"],
 		positions: [[10, 10], [85, 25], [65, 85], [15, 65]],
 	},
-	// 15 · Spectrum — green + cobalt + fuchsia + orange
-	// Near-tetradic but anchored by analogous cool pair (green+blue). Orange is the warmth.
+	// 15 · Blueprint (BLUE: cobalt + cyan + indigo + amber)
 	{
 		id: 15,
-		colors: ["#16A34A", "#2563EB", "#C026D3", "#EA580C"],
+		colors: ["#2563EB", "#06B6D4", "#4F46E5", "#F59E0B"],
 		positions: [[85, 15], [15, 85], [80, 80], [20, 15]],
 	},
-	// 16 · Nebula — indigo + rose + teal + amber
-	// Cool trio (indigo+teal) framing warm pair (rose+amber). Emergent: rose×indigo→crimson.
+	// 16 · Solar Flare (ORANGE: orange + coral + cobalt + lime)
 	{
 		id: 16,
-		colors: ["#4F46E5", "#E11D48", "#0D9488", "#D97706"],
+		colors: ["#F97316", "#F43F5E", "#1D4ED8", "#65A30D"],
 		positions: [[50, 50], [10, 10], [85, 25], [75, 85]],
 	},
-	// 17 · Ultrawave — violet + ocean + orange + hot pink
-	// Electric intensity. Violet+ocean cool foundation, orange+pink vivid warm burst.
+	// 17 · Phantom (PURPLE: violet + cobalt + fuchsia + emerald)
 	{
 		id: 17,
-		colors: ["#9333EA", "#0891B2", "#EA580C", "#DB2777"],
+		colors: ["#7C3AED", "#1D4ED8", "#C026D3", "#10B981"],
 		positions: [[5, 75], [80, 20], [25, 25], [85, 85]],
 	},
-	// 18 · Deep Pacific — blue + emerald + rose + gold
-	// Ocean (blue+green) meets warmth (rose+gold). Classic complementary with bridging.
+	// 18 · Spearmint (TEAL: emerald + cyan + pink + gold)
 	{
 		id: 18,
-		colors: ["#2563EB", "#16A34A", "#E11D48", "#CA8A04"],
+		colors: ["#10B981", "#06B6D4", "#EC4899", "#CA8A04"],
 		positions: [[15, 15], [80, 80], [20, 80], [85, 15]],
 	},
-	// 19 · Dusk — indigo + violet + amber + teal
-	// Twilight analogous (indigo+violet), then amber+teal as opposing warmth/cool accents.
+	// 19 · Dusk Rose (PINK: coral + rose + indigo + teal)
 	{
 		id: 19,
-		colors: ["#4F46E5", "#7C3AED", "#D97706", "#0D9488"],
+		colors: ["#F43F5E", "#DB2777", "#4F46E5", "#0D9488"],
 		positions: [[25, 25], [80, 10], [10, 80], [85, 80]],
 	},
 ];
