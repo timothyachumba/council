@@ -179,15 +179,16 @@ export interface AgentConfig {
 	name: string;
 	description: string;
 	state: AgentState;
-	prompt: string;
-	color: string;
+	systemPrompt: string;   // full system prompt — seeded from agentPrompts.ts on first load
+	gradientPreset: number; // index into GRADIENT_PRESETS (0–19)
 }
 
 export interface CouncilSettings {
 	activeSessionId: string | null;
 	model: ClaudeModel;
-	effortLevel: "low" | "normal" | "high";
-	showThinkingTimeline: boolean;
+	claudeCliPath: string | null;       // resolved CLI binary path
+	vaultReadDirs: string[];            // folders passed as --add-dir (relative to vault root)
+	vaultWriteDir: string;              // sync write destination (relative to vault root)
 	agents: AgentConfig[];
 	agentSessions: Record<string, string | null>;
 	parakeetPath: string | null;
@@ -196,18 +197,20 @@ export interface CouncilSettings {
 	lastSavedIndex: number;
 }
 
+// Default agents — systemPrompt is empty here and seeded in main.ts loadSettings()
 export const DEFAULT_AGENTS: AgentConfig[] = [
-	{ id: "edge",  name: "Edge",  description: "Challenges your assumptions",      state: "watching", prompt: "", color: "var(--cv-agent-edge)" },
-	{ id: "loom",  name: "Loom",  description: "Surfaces cross-context resonance", state: "watching", prompt: "", color: "var(--cv-agent-loom)" },
-	{ id: "ember", name: "Ember", description: "Extends half-formed ideas",        state: "watching", prompt: "", color: "var(--cv-agent-ember)" },
-	{ id: "quill", name: "Quill", description: "Shapes thoughts toward writing",   state: "still",    prompt: "", color: "var(--cv-agent-quill)" },
+	{ id: "edge",  name: "Edge",  description: "Challenges your assumptions",      state: "watching", systemPrompt: "", gradientPreset: 0 },
+	{ id: "loom",  name: "Loom",  description: "Surfaces cross-context resonance", state: "watching", systemPrompt: "", gradientPreset: 1 },
+	{ id: "ember", name: "Ember", description: "Extends half-formed ideas",        state: "watching", systemPrompt: "", gradientPreset: 2 },
+	{ id: "quill", name: "Quill", description: "Shapes thoughts toward writing",   state: "still",    systemPrompt: "", gradientPreset: 3 },
 ];
 
 export const DEFAULT_SETTINGS: CouncilSettings = {
 	activeSessionId: null,
 	model: "claude-sonnet-4-6",
-	effortLevel: "normal",
-	showThinkingTimeline: false,
+	claudeCliPath: null,
+	vaultReadDirs: [],
+	vaultWriteDir: "Stream",
 	agents: DEFAULT_AGENTS,
 	agentSessions: {},
 	parakeetPath: null,
