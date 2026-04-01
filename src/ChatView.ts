@@ -7,7 +7,7 @@ import { SessionStore } from "./SessionStore";
 import { VoiceService } from "./VoiceService";
 import { AgentOrchestrator } from "./AgentOrchestrator";
 import type {
-	ClaudeVaultSettings,
+	CouncilSettings,
 	ClaudeModel,
 	SessionEntry,
 	PermissionBlock,
@@ -17,8 +17,9 @@ import { appendStoredEvent, makeEventId } from "./types";
 import * as fs from "fs";
 import * as path from "path";
 import { getStatusString, getToolPhase } from "./agentStatus";
+import { VaultSyncService } from "./VaultSyncService";
 
-export const CHAT_VIEW_TYPE = "claude-vault:chat";
+export const CHAT_VIEW_TYPE = "council:chat";
 
 const SETTINGS_PATH = path.join(
 	process.env.HOME ?? "/Users/timothyachumba",
@@ -27,7 +28,7 @@ const SETTINGS_PATH = path.join(
 );
 
 export class ChatView extends ItemView {
-	private settings: ClaudeVaultSettings;
+	private settings: CouncilSettings;
 	private saveSettings: () => Promise<void>;
 	private claude: ClaudeService;
 	private sessionStore: SessionStore;
@@ -41,6 +42,7 @@ export class ChatView extends ItemView {
 	// Services
 	private voiceService!: VoiceService;
 	private orchestrator!: AgentOrchestrator;
+	private vaultSync!: VaultSyncService;
 	private assetResolver!: (path: string) => string;
 
 	// State
@@ -48,7 +50,7 @@ export class ChatView extends ItemView {
 
 	constructor(
 		leaf: WorkspaceLeaf,
-		settings: ClaudeVaultSettings,
+		settings: CouncilSettings,
 		saveSettings: () => Promise<void>,
 		claude: ClaudeService,
 		sessionStore: SessionStore,
@@ -70,7 +72,7 @@ export class ChatView extends ItemView {
 		root.empty();
 		root.addClass("cv-root");
 
-		const pluginDir = ".obsidian/plugins/claude-vault";
+		const pluginDir = ".obsidian/plugins/council";
 		this.assetResolver = (path: string) =>
 			this.app.vault.adapter.getResourcePath(`${pluginDir}/${path}`);
 
@@ -82,6 +84,16 @@ export class ChatView extends ItemView {
 
 		// Voice service
 		this.voiceService = new VoiceService(this.settings.parakeetPath);
+
+		// Vault sync service
+		this.vaultSync = new VaultSyncService(
+			() => this.settings.chatHistory ?? [],
+			() => this.settings.lastSavedIndex ?? 0,
+			(newIndex) => {
+				this.settings.lastSavedIndex = newIndex;
+				void this.saveSettings();
+			},
+		);
 
 		// Agent orchestrator
 		this.orchestrator = new AgentOrchestrator(
@@ -120,6 +132,7 @@ export class ChatView extends ItemView {
 	async onClose(): Promise<void> {
 		this.claude.abort();
 		this.orchestrator.abort();
+		this.vaultSync.cancel();
 		if (this.voiceService.isRecording) {
 			this.voiceService.stopRecording();
 		}
@@ -136,6 +149,9 @@ export class ChatView extends ItemView {
 		setIcon(menuBtn, "menu");
 		menuBtn.addEventListener("click", () => this.openSessionModal());
 		bar.createDiv({ cls: "cv-header__spacer" });
+		const syncBtn = bar.createDiv({ cls: "cv-icon-btn", attr: { title: "Save to vault" } });
+		setIcon(syncBtn, "archive");
+		syncBtn.addEventListener("click", () => { void this.vaultSync.syncNow(); });
 		const moreBtn = bar.createDiv({ cls: "cv-icon-btn" });
 		setIcon(moreBtn, "more-horizontal");
 
@@ -181,6 +197,7 @@ export class ChatView extends ItemView {
 
 	private handleSend(text: string): void {
 		if (this.claude.isActive() || this.orchestrator.isActive()) return;
+		this.vaultSync.resetTimer();
 
 		// Reply stays in thread, new message breaks out
 		const isReply = this.inputBar.hasReplyContext();

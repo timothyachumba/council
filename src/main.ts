@@ -3,10 +3,10 @@ import { ChatView, CHAT_VIEW_TYPE } from "./ChatView";
 import { ClaudeService } from "./ClaudeService";
 import { SessionStore } from "./SessionStore";
 import { DEFAULT_SETTINGS } from "./types";
-import type { ClaudeVaultSettings } from "./types";
+import type { CouncilSettings } from "./types";
 
-export default class ClaudeVaultPlugin extends Plugin {
-	settings!: ClaudeVaultSettings;
+export default class CouncilPlugin extends Plugin {
+	settings!: CouncilSettings;
 	private claude!: ClaudeService;
 	private sessionStore!: SessionStore;
 
@@ -59,7 +59,7 @@ export default class ClaudeVaultPlugin extends Plugin {
 	}
 
 	async loadSettings(): Promise<void> {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<ClaudeVaultSettings>);
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<CouncilSettings>);
 	}
 
 	async saveSettings(): Promise<void> {

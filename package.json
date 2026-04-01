@@ -1,7 +1,7 @@
 {
-  "name": "claude-vault",
+  "name": "council",
   "version": "0.1.0",
-  "description": "Native Claude Code chat interface inside Obsidian",
+  "description": "A multi-agent thinking surface for Obsidian, powered by Claude",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",

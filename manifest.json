@@ -1,9 +1,9 @@
 {
-  "id": "claude-vault",
-  "name": "Claude Vault",
+  "id": "council",
+  "name": "Council",
   "version": "0.1.0",
   "minAppVersion": "1.0.0",
-  "description": "Native Claude Code chat interface inside Obsidian",
+  "description": "A multi-agent thinking surface for Obsidian, powered by Claude",
   "author": "Timothy Achumba",
   "authorUrl": "",
   "fundingUrl": "",

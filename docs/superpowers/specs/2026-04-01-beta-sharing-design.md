@@ -1,7 +1,7 @@
-# Claude Vault — Beta Sharing Design
+# Council — Beta Sharing Design
 
 **Date:** 2026-04-01  
-**Goal:** Make Claude Vault installable and usable by a friend without code changes. They use Obsidian but have a different vault structure. They want agents, configurable context, and a write-back destination.
+**Goal:** Make Council installable and usable by a friend without code changes. They use Obsidian but have a different vault structure. They want agents, configurable context, and a write-back destination.
 
 ---
 

@@ -183,7 +183,7 @@ export interface AgentConfig {
 	color: string;
 }
 
-export interface ClaudeVaultSettings {
+export interface CouncilSettings {
 	activeSessionId: string | null;
 	model: ClaudeModel;
 	effortLevel: "low" | "normal" | "high";
@@ -193,6 +193,7 @@ export interface ClaudeVaultSettings {
 	parakeetPath: string | null;
 	voiceAutoSend: boolean;
 	chatHistory: StoredEvent[];
+	lastSavedIndex: number;
 }
 
 export const DEFAULT_AGENTS: AgentConfig[] = [
@@ -202,7 +203,7 @@ export const DEFAULT_AGENTS: AgentConfig[] = [
 	{ id: "quill", name: "Quill", description: "Shapes thoughts toward writing",   state: "still",    prompt: "", color: "var(--cv-agent-quill)" },
 ];
 
-export const DEFAULT_SETTINGS: ClaudeVaultSettings = {
+export const DEFAULT_SETTINGS: CouncilSettings = {
 	activeSessionId: null,
 	model: "claude-sonnet-4-6",
 	effortLevel: "normal",
@@ -212,4 +213,5 @@ export const DEFAULT_SETTINGS: ClaudeVaultSettings = {
 	parakeetPath: null,
 	voiceAutoSend: true,
 	chatHistory: [],
+	lastSavedIndex: 0,
 };
