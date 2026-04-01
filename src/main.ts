@@ -75,10 +75,14 @@ export default class CouncilPlugin extends Plugin {
 	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<CouncilSettings>);
 
-		// Seed systemPrompt for any agent that doesn't have one yet
+		// Seed systemPrompt for any agent that doesn't have one yet.
+		// Also clamp gradientPreset to valid range (0–9) in case of stale saved data.
 		for (const agent of this.settings.agents) {
 			if (!agent.systemPrompt && AGENT_PROMPTS[agent.id]) {
 				agent.systemPrompt = AGENT_PROMPTS[agent.id];
+			}
+			if (agent.gradientPreset > 9) {
+				agent.gradientPreset = agent.gradientPreset % 10;
 			}
 		}
 	}

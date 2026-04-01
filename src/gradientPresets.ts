@@ -3,14 +3,14 @@
 export interface GradientPreset {
 	id: number;
 	colors: [string, string, string, string];
-	// Seed positions as [x%, y%] — controls where each color blob is anchored.
+	// Seed positions as [x%, y%] — each preset has a unique blob layout.
 	positions: [[number, number], [number, number], [number, number], [number, number]];
 }
 
 /**
  * Renders a gradient preset as a CSS `background` string.
- * C1 is the solid base fill — it defines the dominant visual identity of the swatch.
- * The other three colors bloom as radial blobs over the top.
+ * C1 is the solid base fill — it defines the dominant visual identity.
+ * C2–C4 are derived companions that create interesting blends over C1.
  */
 export function gradientToCss(preset: GradientPreset): string {
 	const [c1, c2, c3, c4] = preset.colors;
@@ -20,151 +20,114 @@ export function gradientToCss(preset: GradientPreset): string {
 		`radial-gradient(circle at ${p2[0]}% ${p2[1]}%, ${c2} 0%, transparent 57%)`,
 		`radial-gradient(circle at ${p3[0]}% ${p3[1]}%, ${c3} 0%, transparent 65%)`,
 		`radial-gradient(circle at ${p4[0]}% ${p4[1]}%, ${c4} 0%, transparent 52%)`,
-		c1, // solid base — C1 defines the dominant identity
+		c1,
 	].join(", ");
 }
 
 /**
- * Returns the first color of a preset — used as the agent's primary accent
- * (name badges, @mention chips, message card avatars).
+ * Returns the primary accent color for badges and mention chips.
  */
 export function primaryColor(preset: GradientPreset): string {
 	return preset.colors[0];
 }
 
-// 20 presets across 5 visual families, 4 per family, interleaved so the
-// 10-column picker (rows of 10) alternates: BLUE·ORANGE·PURPLE·TEAL·PINK·BLUE·ORANGE·PURPLE·TEAL·PINK
+// 10 presets — each built from one primary hue with 3 derived companions:
+//   C1: primary (dominant identity, solid base fill)
+//   C2: analogous (±30–40° — blends smoothly, deepens the field)
+//   C3: split-complement (~150° — the dramatic tension color)
+//   C4: warm or cool anchor (seals the palette, emergent blend at center)
 //
-// Row 1 (0–9):  blue · orange · purple · teal · pink · blue · orange · purple · teal · pink
-// Row 2 (10–19): blue · orange · purple · teal · pink · blue · orange · purple · teal · pink
-//
-// Indices 0–3 are the default agent identities — one per distinct family.
-// C1 always defines the swatch identity (it's also the solid base fill).
+// Indices 0–3 are the default agent identities.
+// Each preset has a unique position seed for a distinct blob composition.
 export const GRADIENT_PRESETS: GradientPreset[] = [
 
-	// ── Row 1 ──────────────────────────────────────────────────────────────────
-
-	// 0 · Cobalt — Edge (BLUE: deep blue + indigo + hot pink + amber)
+	// 0 · Cobalt — Edge
+	// Primary: deep cobalt blue. C2: indigo (analogous). C3: rose (split-comp ~150° away).
+	// C4: amber (warm anchor). Emergent: cobalt×indigo→electric blue, rose×amber→warm coral.
 	{
 		id: 0,
 		colors: ["#1D4ED8", "#4F46E5", "#EC4899", "#F59E0B"],
 		positions: [[15, 25], [75, 15], [80, 75], [20, 80]],
 	},
-	// 1 · Terra — Loom (ORANGE: burnt orange + gold + violet + sky)
+
+	// 1 · Terra — Loom
+	// Primary: burnt orange. C2: amber-yellow (analogous warm). C3: sky blue (complement).
+	// C4: fuchsia (split-comp). Emergent: orange×yellow→fire, sky×fuchsia→electric.
 	{
 		id: 1,
-		colors: ["#EA580C", "#EAB308", "#7C3AED", "#0EA5E9"],
+		colors: ["#EA580C", "#EAB308", "#0EA5E9", "#C026D3"],
 		positions: [[20, 75], [75, 20], [85, 80], [10, 15]],
 	},
-	// 2 · Ember — Ember (PURPLE: violet + fuchsia + cyan + amber)
+
+	// 2 · Violet — Ember
+	// Primary: vivid violet. C2: fuchsia (analogous). C3: lime green (split-comp ~150°).
+	// C4: amber (warm anchor). Emergent: violet×fuchsia→magenta, green×amber→electric gold.
 	{
 		id: 2,
-		colors: ["#9333EA", "#C026D3", "#06B6D4", "#F59E0B"],
+		colors: ["#9333EA", "#C026D3", "#65A30D", "#F59E0B"],
 		positions: [[5, 35], [80, 10], [60, 80], [30, 70]],
 	},
-	// 3 · Canopy — Quill (TEAL: teal + emerald + rose + sky)
+
+	// 3 · Teal — Quill
+	// Primary: teal. C2: emerald (analogous). C3: crimson (complement ~180°).
+	// C4: violet (split). Emergent: teal×emerald→deep green, crimson×violet→warm purple.
 	{
 		id: 3,
-		colors: ["#0D9488", "#16A34A", "#E11D48", "#0284C7"],
+		colors: ["#0D9488", "#059669", "#E11D48", "#8B5CF6"],
 		positions: [[20, 20], [75, 35], [85, 85], [10, 75]],
 	},
-	// 4 · Flamingo (PINK: hot pink + rose + cobalt + emerald)
+
+	// 4 · Rose
+	// Primary: hot pink. C2: coral-rose (analogous). C3: emerald (split-comp ~150°).
+	// C4: cobalt (cool anchor). Emergent: pink×rose→vivid coral, emerald×cobalt→ocean.
 	{
 		id: 4,
-		colors: ["#EC4899", "#F43F5E", "#1D4ED8", "#10B981"],
-		positions: [[85, 85], [20, 75], [10, 10], [80, 15]],
+		colors: ["#EC4899", "#F43F5E", "#10B981", "#1D4ED8"],
+		positions: [[85, 85], [15, 75], [10, 10], [80, 15]],
 	},
-	// 5 · Arctic (BLUE: sky + cobalt + violet + gold)
+
+	// 5 · Emerald
+	// Primary: emerald green. C2: teal (analogous cool). C3: crimson (complement).
+	// C4: sky (split). Emergent: green×teal→deep cyan, crimson×sky→vivid mauve.
 	{
 		id: 5,
-		colors: ["#0EA5E9", "#2563EB", "#8B5CF6", "#FBBF24"],
-		positions: [[5, 5], [80, 30], [30, 85], [85, 80]],
-	},
-	// 6 · Solstice (ORANGE: amber + gold + indigo + teal)
-	{
-		id: 6,
-		colors: ["#D97706", "#F59E0B", "#4F46E5", "#0D9488"],
-		positions: [[70, 20], [15, 70], [80, 75], [30, 15]],
-	},
-	// 7 · Dusk (PURPLE: deep violet + purple + rose + teal)
-	{
-		id: 7,
-		colors: ["#6D28D9", "#9333EA", "#F43F5E", "#0D9488"],
-		positions: [[80, 80], [20, 15], [60, 40], [10, 85]],
-	},
-	// 8 · Lagoon (TEAL: cyan + teal + violet + amber)
-	{
-		id: 8,
-		colors: ["#06B6D4", "#0D9488", "#7C3AED", "#F59E0B"],
+		colors: ["#059669", "#0D9488", "#DC2626", "#0EA5E9"],
 		positions: [[50, 10], [85, 60], [25, 85], [10, 30]],
 	},
-	// 9 · Fuchsia (PINK: fuchsia + violet + cyan + gold)
+
+	// 6 · Amber
+	// Primary: amber/gold. C2: warm yellow (analogous). C3: cobalt (complement ~180°).
+	// C4: violet (split). Emergent: amber×yellow→hot gold, cobalt×violet→electric indigo.
 	{
-		id: 9,
-		colors: ["#C026D3", "#7C3AED", "#06B6D4", "#F59E0B"],
-		positions: [[80, 20], [10, 80], [85, 75], [20, 15]],
+		id: 6,
+		colors: ["#D97706", "#CA8A04", "#2563EB", "#7C3AED"],
+		positions: [[80, 20], [15, 70], [75, 80], [30, 15]],
 	},
 
-	// ── Row 2 ──────────────────────────────────────────────────────────────────
+	// 7 · Cyan
+	// Primary: cyan. C2: sky (analogous). C3: orange (complement ~180°).
+	// C4: purple (split). Emergent: cyan×sky→icy blue, orange×purple→warm magenta.
+	{
+		id: 7,
+		colors: ["#06B6D4", "#0EA5E9", "#F97316", "#A855F7"],
+		positions: [[5, 5], [80, 30], [30, 85], [85, 80]],
+	},
 
-	// 10 · Nocturn (BLUE: midnight + violet + rose + teal)
+	// 8 · Crimson
+	// Primary: vivid red. C2: orange (analogous warm). C3: teal (complement ~180°).
+	// C4: violet (split). Emergent: red×orange→fire, teal×violet→deep jewel.
 	{
-		id: 10,
-		colors: ["#1E40AF", "#5B21B6", "#F43F5E", "#0D9488"],
-		positions: [[20, 15], [80, 20], [75, 80], [15, 80]],
-	},
-	// 11 · Inferno (ORANGE: red + orange + indigo + cyan)
-	{
-		id: 11,
-		colors: ["#DC2626", "#F97316", "#4F46E5", "#06B6D4"],
-		positions: [[5, 5], [85, 80], [80, 15], [10, 75]],
-	},
-	// 12 · Ultraviolet (PURPLE: indigo + violet + pink + gold)
-	{
-		id: 12,
-		colors: ["#4F46E5", "#A855F7", "#EC4899", "#F59E0B"],
-		positions: [[75, 25], [20, 75], [80, 80], [15, 15]],
-	},
-	// 13 · Jungle (TEAL: emerald + lime + fuchsia + sky)
-	{
-		id: 13,
-		colors: ["#059669", "#65A30D", "#C026D3", "#0EA5E9"],
-		positions: [[20, 80], [80, 80], [15, 20], [75, 15]],
-	},
-	// 14 · Rose Gold (PINK: rose + pink + violet + gold)
-	{
-		id: 14,
-		colors: ["#E11D48", "#EC4899", "#7C3AED", "#D97706"],
-		positions: [[10, 10], [85, 25], [65, 85], [15, 65]],
-	},
-	// 15 · Blueprint (BLUE: cobalt + cyan + indigo + amber)
-	{
-		id: 15,
-		colors: ["#2563EB", "#06B6D4", "#4F46E5", "#F59E0B"],
-		positions: [[85, 15], [15, 85], [80, 80], [20, 15]],
-	},
-	// 16 · Solar Flare (ORANGE: orange + coral + cobalt + lime)
-	{
-		id: 16,
-		colors: ["#F97316", "#F43F5E", "#1D4ED8", "#65A30D"],
+		id: 8,
+		colors: ["#DC2626", "#F97316", "#0D9488", "#8B5CF6"],
 		positions: [[50, 50], [10, 10], [85, 25], [75, 85]],
 	},
-	// 17 · Phantom (PURPLE: violet + cobalt + fuchsia + emerald)
+
+	// 9 · Fuchsia
+	// Primary: fuchsia. C2: hot pink (analogous). C3: lime (split-comp ~150°).
+	// C4: sky (cool anchor). Emergent: fuchsia×pink→vivid magenta, lime×sky→electric teal.
 	{
-		id: 17,
-		colors: ["#7C3AED", "#1D4ED8", "#C026D3", "#10B981"],
-		positions: [[5, 75], [80, 20], [25, 25], [85, 85]],
-	},
-	// 18 · Spearmint (TEAL: emerald + cyan + pink + gold)
-	{
-		id: 18,
-		colors: ["#10B981", "#06B6D4", "#EC4899", "#CA8A04"],
-		positions: [[15, 15], [80, 80], [20, 80], [85, 15]],
-	},
-	// 19 · Dusk Rose (PINK: coral + rose + indigo + teal)
-	{
-		id: 19,
-		colors: ["#F43F5E", "#DB2777", "#4F46E5", "#0D9488"],
-		positions: [[25, 25], [80, 10], [10, 80], [85, 80]],
+		id: 9,
+		colors: ["#C026D3", "#EC4899", "#65A30D", "#0EA5E9"],
+		positions: [[25, 80], [80, 15], [10, 25], [85, 75]],
 	},
 ];
