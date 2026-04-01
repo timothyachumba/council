@@ -1153,3 +1153,84 @@
   color: var(--text-normal);
   margin-bottom: 0.5rem;
 }
+
+/* ── Settings tab ────────────────────────────────────────────────────────── */
+.cv-settings-cli-status {
+  margin: -0.5rem 0 1rem 0;
+  font-size: 0.8rem;
+}
+
+.cv-cli-status--found {
+  color: var(--color-green);
+}
+
+.cv-cli-status--missing {
+  color: var(--color-orange);
+}
+
+.cv-settings-list {
+  margin-bottom: 0.5rem;
+}
+
+.cv-settings-list-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+  align-items: center;
+}
+
+.cv-settings-list-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: 0.9rem;
+}
+
+.cv-settings-list-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  padding: 0 6px;
+}
+
+.cv-settings-list-remove:hover {
+  color: var(--color-red);
+}
+
+.cv-settings-agents {
+  margin-top: 0.5rem;
+}
+
+.cv-settings-agent-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.cv-settings-agent-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+
+.cv-settings-agent-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.cv-btn--danger {
+  color: var(--color-red);
+}
+
+.cv-btn--add {
+  margin-top: 0.75rem;
+}
