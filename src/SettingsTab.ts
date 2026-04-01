@@ -169,8 +169,12 @@ export class SettingsTab extends PluginSettingTab {
 			const preset = GRADIENT_PRESETS[agent.gradientPreset] ?? GRADIENT_PRESETS[0];
 			swatch.style.background = gradientToCss(preset);
 
-			// Name
-			row.createSpan({ text: agent.name, cls: "cv-settings-agent-name" });
+			// Name + description
+			const info = row.createDiv({ cls: "cv-settings-agent-info" });
+			info.createDiv({ text: agent.name, cls: "cv-settings-agent-name" });
+			if (agent.description) {
+				info.createDiv({ text: agent.description, cls: "cv-settings-agent-desc" });
+			}
 
 			// Edit button
 			const editBtn = row.createEl("button", { text: "Edit", cls: "cv-btn" });

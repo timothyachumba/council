@@ -66,15 +66,14 @@ export class AgentEditorModal extends Modal {
 			);
 
 		// ── Description ──────────────────────────────────────────────────────
-		new Setting(contentEl)
-			.setName("Description")
-			.setDesc("Short subtitle shown in the agent panel.")
-			.addText((text) =>
-				text
-					.setPlaceholder("e.g. Pushes back on half-baked ideas")
-					.setValue(this.draft.description)
-					.onChange((value) => { this.draft.description = value; })
-			);
+		contentEl.createEl("p", { text: "Description", cls: "cv-settings-label" });
+		const descEl = contentEl.createEl("textarea", { cls: "cv-desc-textarea" });
+		descEl.value = this.draft.description;
+		descEl.rows = 2;
+		descEl.placeholder = "Short subtitle shown in the agent panel.";
+		descEl.addEventListener("input", () => {
+			this.draft.description = descEl.value;
+		});
 
 		// ── System prompt ─────────────────────────────────────────────────────
 		contentEl.createEl("p", { text: "System prompt", cls: "cv-settings-label" });
