@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Modal, App, setIcon } from "obsidian";
+import { ItemView, WorkspaceLeaf, Modal, App, setIcon, FileSystemAdapter } from "obsidian";
 import { ClaudeService } from "./ClaudeService";
 import { MessageList } from "./MessageList";
 import { InputBar } from "./InputBar";
@@ -18,19 +18,15 @@ import * as fs from "fs";
 import * as path from "path";
 import { getStatusString, getToolPhase } from "./agentStatus";
 import { VaultSyncService } from "./VaultSyncService";
+import { detectClaudeCli } from "./cliDetector";
 
 export const CHAT_VIEW_TYPE = "council:chat";
 
-const SETTINGS_PATH = path.join(
-	process.env.HOME ?? "/Users/timothyachumba",
-	".claude",
-	"settings.json",
-);
 
 export class ChatView extends ItemView {
 	private settings: CouncilSettings;
 	private saveSettings: () => Promise<void>;
-	private claude: ClaudeService;
+	private claude!: ClaudeService;
 	private sessionStore: SessionStore;
 
 	// UI
@@ -52,13 +48,11 @@ export class ChatView extends ItemView {
 		leaf: WorkspaceLeaf,
 		settings: CouncilSettings,
 		saveSettings: () => Promise<void>,
-		claude: ClaudeService,
 		sessionStore: SessionStore,
 	) {
 		super(leaf);
 		this.settings = settings;
 		this.saveSettings = saveSettings;
-		this.claude = claude;
 		this.sessionStore = sessionStore;
 		this.currentSessionId = settings.activeSessionId;
 	}
@@ -68,6 +62,12 @@ export class ChatView extends ItemView {
 	getIcon(): string { return "message-square"; }
 
 	async onOpen(): Promise<void> {
+		const vaultRoot = (this.app.vault.adapter as FileSystemAdapter).basePath;
+		const cliPath = this.settings.claudeCliPath ?? "";
+		const readDirs = this.settings.vaultReadDirs.length > 0
+			? this.settings.vaultReadDirs.map((d) => path.join(vaultRoot, d))
+			: [vaultRoot];
+
 		const root = this.contentEl;
 		root.empty();
 		root.addClass("cv-root");
@@ -79,11 +79,14 @@ export class ChatView extends ItemView {
 		this.agentPanel = new AgentPanel(this.settings.agents, (agents) => {
 			this.settings.agents = agents;
 			void this.saveSettings();
-		}, this.assetResolver);
+		});
 		this.agentPanel.onStateChange((open) => this.inputBar.setDimmed(open));
 
 		// Voice service
 		this.voiceService = new VoiceService(this.settings.parakeetPath);
+
+		// Claude service
+		this.claude = new ClaudeService(cliPath, vaultRoot, readDirs);
 
 		// Vault sync service
 		this.vaultSync = new VaultSyncService(
@@ -93,6 +96,9 @@ export class ChatView extends ItemView {
 				this.settings.lastSavedIndex = newIndex;
 				void this.saveSettings();
 			},
+			cliPath,
+			vaultRoot,
+			this.settings.vaultWriteDir ?? "Stream",
 		);
 
 		// Agent orchestrator
@@ -102,6 +108,9 @@ export class ChatView extends ItemView {
 				this.settings.agentSessions[agentId] = sessionId;
 				void this.saveSettings();
 			},
+			cliPath,
+			vaultRoot,
+			readDirs,
 		);
 
 		this.buildHeader(root);
@@ -495,11 +504,16 @@ export class ChatView extends ItemView {
 
 	private writeModelToSettings(model: ClaudeModel): void {
 		try {
+			const settingsPath = path.join(
+				process.env.HOME ?? "",
+				".claude",
+				"settings.json",
+			);
 			let raw = "{}";
-			try { raw = fs.readFileSync(SETTINGS_PATH, "utf8"); } catch { /* noop */ }
+			try { raw = fs.readFileSync(settingsPath, "utf8"); } catch { /* noop */ }
 			const obj = JSON.parse(raw) as Record<string, unknown>;
 			obj.model = model;
-			fs.writeFileSync(SETTINGS_PATH, JSON.stringify(obj, null, 2), "utf8");
+			fs.writeFileSync(settingsPath, JSON.stringify(obj, null, 2), "utf8");
 		} catch (e) {
 			console.error("[claude-vault] Failed to write model to settings.json", e);
 		}
