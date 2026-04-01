@@ -4,6 +4,14 @@ import { getStatusString } from "./agentStatus";
 
 const THINKING_CYCLE_MS = 6000;
 
+/** Fallback color map for @mention chips — matches default agent colors */
+const AGENT_COLORS: Record<string, string> = {
+	edge:  "#4858D4",
+	loom:  "#DC6845",
+	ember: "#7B32C8",
+	quill: "#5FA96E",
+};
+
 export class MessageList {
 	private container: HTMLElement;
 	private component: Component;

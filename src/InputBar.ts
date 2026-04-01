@@ -1,13 +1,14 @@
 import { setIcon } from "obsidian";
 import { animate } from "motion";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import type { ClaudeModel, AgentConfig } from "./types";
 import type { VoiceService } from "./VoiceService";
 import { GRADIENT_PRESETS, primaryColor } from "./gradientPresets";
 
 const COMMANDS_PATH = path.join(
-	process.env.HOME ?? "/Users/timothyachumba",
+	process.env.HOME ?? os.homedir(),
 	".claude",
 	"commands",
 );

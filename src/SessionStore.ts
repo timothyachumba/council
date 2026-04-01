@@ -1,17 +1,16 @@
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import * as readline from "readline";
 import type { SessionEntry } from "./types";
 
-const HISTORY_PATH = path.join(
-	process.env.HOME ?? "/Users/timothyachumba",
-	".claude",
-	"projects",
-);
-
-const VAULT_PATH = "/Users/timothyachumba/vault";
-
 export class SessionStore {
+	private vaultPath: string | null;
+
+	constructor(vaultPath?: string) {
+		this.vaultPath = vaultPath ?? null;
+	}
+
 	/**
 	 * Read all sessions from ~/.claude/projects/
 	 * Each subfolder is a project; inside are session JSONL files.
@@ -20,26 +19,28 @@ export class SessionStore {
 	async getSessions(): Promise<SessionEntry[]> {
 		const sessions: SessionEntry[] = [];
 
+		const historyPath = path.join(os.homedir(), ".claude", "projects");
+
 		// Encode the vault path the same way Claude does (slashes → hyphens)
-		const encodedVault = VAULT_PATH.replace(/\//g, "-");
+		const encodedVault = this.vaultPath ? this.vaultPath.replace(/\//g, "-") : null;
 
 		let projectDirs: string[] = [];
 		try {
-			projectDirs = fs.readdirSync(HISTORY_PATH);
+			projectDirs = fs.readdirSync(historyPath);
 		} catch {
 			return sessions;
 		}
 
 		// Find dirs that match the vault path encoding
-		const matchingDirs = projectDirs.filter((d) =>
-			d.includes(encodedVault) || encodedVault.includes(d)
-		);
+		const matchingDirs = encodedVault
+			? projectDirs.filter((d) => d.includes(encodedVault) || encodedVault.includes(d))
+			: [];
 
 		// Also include all dirs if none match specifically — show all sessions
 		const dirsToScan = matchingDirs.length > 0 ? matchingDirs : projectDirs;
 
 		for (const dir of dirsToScan) {
-			const dirPath = path.join(HISTORY_PATH, dir);
+			const dirPath = path.join(historyPath, dir);
 			let stat: fs.Stats;
 			try {
 				stat = fs.statSync(dirPath);
