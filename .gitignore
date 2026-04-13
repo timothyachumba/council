@@ -3,3 +3,5 @@ main.js
 *.js.map
 .hotreload
 data.json
+docs/
+app.css
