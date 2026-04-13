@@ -119,67 +119,87 @@ function buildPrompt(transcript: string, vaultRoot: string, vaultWriteDir: strin
 	const threadsDir = path.join(vaultRoot, vaultThreadsDir);
 	const memoryFile = path.join(vaultRoot, vaultMemoryPath);
 
-	return `You are capturing thinking from a council session into the knowledge base. Today is ${date}, time is ${timeFormatted}.
+	return `You are capturing insights from a Council conversation into an Obsidian vault. Today is ${date}, time is ${timeFormatted}.
 
-council is a one-long-continuous-chat Obsidian plugin where the user thinks alongside AI agents (Edge, Loom, Ember, Quill). Source type for stream entries is \`chat\`.
+Council is an Obsidian plugin where the user thinks alongside AI agents (Edge, Loom, Ember, Quill). Your job is to distil the conversation into the vault's knowledge structure.
 
-Here is the conversation transcript to process:
+## Vault structure
+
+- **Daily log**: \`${writeDir}/\` — one file per day, named \`${date}.md\`
+- **Topics**: \`${threadsDir}/\` — one file per topic, kebab-case filenames (e.g. \`ai-tools.md\`)
+- **Memory**: \`${memoryFile}\` — a short index of what's active across topics
+
+## Transcript
 
 <transcript>
 ${transcript}
 </transcript>
 
-**Your task — follow the session-end protocol:**
+## Instructions
 
-## Step 1: Assess significance
-If this transcript is purely mechanical, too thin (less than 2 substantive exchanges), or contains no evolved thinking — print "Nothing to capture." and stop.
+### Step 1: Assess significance
+If this transcript is purely mechanical, too short (less than 2 substantive exchanges), or contains no developed thinking, print "Nothing to capture." and stop.
 
-## Step 2: Write stream entries
-For each substantive insight, evolved position, or meaningful connection that emerged:
+### Step 2: Write daily log entries
+For each substantive insight, evolved position, or meaningful connection:
 
-Append to \`${writeDir}/${date}.md\` (create the day-file with standard frontmatter if it doesn't exist):
+Append to \`${writeDir}/${date}.md\`. Create the file if it doesn't exist.
 
-\`\`\`
----
-[${streamTime} | chat]
-{The developed position or new connection. 1-3 sentences. Capture the core idea, not the full exchange.}
-> thread: {thread-slug}
-
-\`\`\`
-
-Day-file frontmatter (if creating):
-\`\`\`
+**Day-file format** (create with this frontmatter if new):
+\`\`\`markdown
 ---
 type: stream
 date: "${date}"
 ---
-# Stream — ${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+# ${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
 \`\`\`
 
-## Step 3: Route each entry to a topic
-Search \`${threadsDir}\` for an existing topic file that matches the entry's theme (check filenames and frontmatter). If a match exists, append the entry. If nothing matches and there's enough substance, create a new topic file with a short kebab-case filename (e.g. \`ai-tools.md\`). Topic files use this frontmatter:
-\`\`\`
+**Entry format** (append one block per insight):
+\`\`\`markdown
 ---
-topic: {topic name}
+[${streamTime} | chat]
+{1-3 sentences. The developed position or connection — not a summary of the conversation, but the idea that emerged.}
+> topic: {topic-slug}
+\`\`\`
+
+### Step 3: Route entries to topics
+For each entry, search \`${threadsDir}/\` for an existing topic file whose subject matches (check the filename and the \`topic:\` field in frontmatter).
+
+**If a matching topic file exists:** append the entry text under a \`## ${date}\` heading (create the heading if this is the first entry for today).
+
+**If no match exists and the insight has enough substance:** create a new topic file:
+\`\`\`markdown
+---
+topic: {Topic Name}
 created: ${date}
+updated: ${date}
 ---
+# {Topic Name}
+
+## ${date}
+{The entry text}
 \`\`\`
 
-## Step 4: Update memory index
-Read \`${memoryFile}\` and update:
-- Active Threads: update any threads touched
-- Recent Decisions: add any decisions made (keep 10 most recent)
-- Open Threads: add unresolved questions raised
+**If the topics folder is empty**, that's fine — just create new topic files for each distinct theme.
 
-Keep memory.md under 200 lines. Update the \`updated:\` date.
+### Step 4: Update memory index
+Read \`${memoryFile}\` and update these three sections:
 
-## Step 5: Print a compact summary
+- **Active Topics** — list each topic touched in this sync, with a one-line summary of the latest position
+- **Recent Decisions** — add any decisions or commitments made (keep the 10 most recent across all syncs)
+- **Open Questions** — add unresolved questions raised (remove any that were answered)
+
+Update the \`updated:\` date in the frontmatter. Keep the file under 200 lines.
+
+If the memory file only contains the initial template (empty sections), populate it from this sync.
+
+### Step 5: Print summary
 \`\`\`
 === council sync ===
-Stream entries: N | Threads touched: N
+Entries: {n} | Topics: {n touched or created}
 \`\`\`
 
-Do not write session files — only stream entries, thread routing, and memory index updates.`;
+Only write daily log entries, topic files, and the memory index. Do not create any other files.`;
 }
 
 // ─── One-shot Claude invocation ───────────────────────────────────────────────

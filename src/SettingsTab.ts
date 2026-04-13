@@ -105,7 +105,8 @@ export class SettingsTab extends PluginSettingTab {
 								btn.setButtonText("Install");
 								btn.setDisabled(false);
 							} else {
-								new Notice("Voice model installed. Reload Council to use voice.");
+								new Notice("Voice model installed.");
+								this.notifyVoiceRefresh();
 								this.display();
 							}
 						});
@@ -276,6 +277,13 @@ export class SettingsTab extends PluginSettingTab {
 		const leaves = this.app.workspace.getLeavesOfType("council:chat");
 		for (const leaf of leaves) {
 			(leaf.view as ChatView).refreshAgents?.();
+		}
+	}
+
+	private notifyVoiceRefresh(): void {
+		const leaves = this.app.workspace.getLeavesOfType("council:chat");
+		for (const leaf of leaves) {
+			(leaf.view as ChatView).refreshVoice?.();
 		}
 	}
 }

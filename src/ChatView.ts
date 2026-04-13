@@ -67,6 +67,16 @@ export class ChatView extends ItemView {
 		this.agentPanel.setAgents(this.settings.agents);
 	}
 
+	/** Called by SettingsTab after parakeet install to show the voice button. */
+	refreshVoice(): void {
+		const available = (() => {
+			const configured = this.settings.parakeetPath;
+			if (configured) return fs.existsSync(configured);
+			return fs.existsSync(path.join(os.homedir(), ".local", "bin", "parakeet-mlx"));
+		})();
+		this.inputBar.setVoiceAvailable(available);
+	}
+
 	async onOpen(): Promise<void> {
 		const vaultRoot = (this.app.vault.adapter as FileSystemAdapter).basePath;
 		const cliPath = this.settings.claudeCliPath ?? "";
@@ -192,7 +202,9 @@ export class ChatView extends ItemView {
 			this.inputBar.setReplyContext(agentId, agentName);
 		});
 
-		if (!this.settings.syncSetupDone) {
+		// Skip setup card for existing users upgrading — they already have vault configured
+		const isExistingUser = (this.settings.chatHistory?.length ?? 0) > 0;
+		if (!this.settings.syncSetupDone && !isExistingUser) {
 			this.buildSetupCard(messagesEl);
 		}
 	}

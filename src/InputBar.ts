@@ -668,6 +668,10 @@ export class InputBar {
 		this.assetResolver = assetResolver ?? null;
 	}
 
+	setVoiceAvailable(available: boolean): void {
+		this.voiceBtnEl.style.display = available ? "" : "none";
+	}
+
 	setVoiceService(service: VoiceService, autoSend: boolean, available = true): void {
 		this.voiceService = service;
 		this.voiceAutoSend = autoSend;
