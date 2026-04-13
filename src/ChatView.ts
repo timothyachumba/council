@@ -16,6 +16,7 @@ import type {
 import { appendStoredEvent, makeEventId } from "./types";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import { getStatusString, getToolPhase } from "./agentStatus";
 import { VaultSyncService } from "./VaultSyncService";
 import { detectClaudeCli } from "./cliDetector";
@@ -103,7 +104,9 @@ export class ChatView extends ItemView {
 			},
 			cliPath,
 			vaultRoot,
-			this.settings.vaultWriteDir ?? "Stream",
+			this.settings.vaultWriteDir   ?? "Stream",
+			this.settings.vaultThreadsDir ?? "Threads",
+			this.settings.vaultMemoryPath ?? "System/memory.md",
 		);
 
 		// Agent orchestrator
@@ -188,13 +191,94 @@ export class ChatView extends ItemView {
 		this.messageList.onReply((agentId, agentName) => {
 			this.inputBar.setReplyContext(agentId, agentName);
 		});
+
+		if (!this.settings.syncSetupDone) {
+			this.buildSetupCard(messagesEl);
+		}
+	}
+
+	private buildSetupCard(container: HTMLElement): void {
+		const card = container.createDiv({ cls: "cv-setup-card" });
+
+		// Header
+		const header = card.createDiv({ cls: "cv-setup-card__header" });
+		const iconEl = header.createDiv({ cls: "cv-setup-card__icon" });
+		setIcon(iconEl, "archive");
+		header.createDiv({ cls: "cv-setup-card__title", text: "Set up Council" });
+
+		// Description
+		card.createDiv({
+			cls: "cv-setup-card__desc",
+			text: "After each conversation, Council writes insights to your daily log. As themes emerge, entries are sorted into topic folders. A memory index tracks what's active across topics. Folders are created if they don't exist — you can change these paths in settings at any time.",
+		});
+
+		// Path rows
+		const paths = card.createDiv({ cls: "cv-setup-card__paths" });
+
+		const makeRow = (icon: string, label: string, value: string, isFile = false) => {
+			const row = paths.createDiv({ cls: "cv-setup-card__path-row" });
+			const rowIcon = row.createDiv({ cls: "cv-setup-card__path-icon" });
+			setIcon(rowIcon, icon);
+			row.createDiv({ cls: "cv-setup-card__path-label", text: label });
+			const input = row.createEl("input", { type: "text", cls: "cv-setup-card__path-input" });
+			input.value = value;
+			input.placeholder = isFile ? "path/to/file.md" : "FolderName";
+			return input;
+		};
+
+		const streamInput  = makeRow("folder-open", "Daily log", this.settings.vaultWriteDir   ?? "Stream");
+		const threadsInput = makeRow("git-branch",  "Topics",    this.settings.vaultThreadsDir  ?? "Threads");
+		const memoryInput  = makeRow("file-text",   "Memory",    this.settings.vaultMemoryPath  ?? "System/memory.md", true);
+
+		// Actions
+		const actions = card.createDiv({ cls: "cv-setup-card__actions" });
+
+		const skipBtn = actions.createEl("button", { cls: "cv-btn", text: "Skip for now" });
+		skipBtn.addEventListener("click", () => {
+			this.settings.syncSetupDone = true;
+			void this.saveSettings();
+			card.remove();
+		});
+
+		const confirmBtn = actions.createEl("button", { cls: "cv-btn cv-setup-card__confirm", text: "Set up sync" });
+		confirmBtn.addEventListener("click", () => {
+			this.settings.vaultWriteDir   = streamInput.value.trim()  || "Stream";
+			this.settings.vaultThreadsDir = threadsInput.value.trim() || "Threads";
+			this.settings.vaultMemoryPath = memoryInput.value.trim()  || "System/memory.md";
+			this.settings.syncSetupDone   = true;
+
+			// Create folders and bootstrap memory file
+			const root = (this.app.vault.adapter as FileSystemAdapter).basePath;
+			const { mkdirSync, writeFileSync, existsSync } = require("fs") as typeof import("fs");
+			const streamPath  = path.join(root, this.settings.vaultWriteDir);
+			const threadsPath = path.join(root, this.settings.vaultThreadsDir);
+			const memoryAbs   = path.join(root, this.settings.vaultMemoryPath);
+			try { mkdirSync(streamPath,                    { recursive: true }); } catch { /* noop */ }
+			try { mkdirSync(threadsPath,                   { recursive: true }); } catch { /* noop */ }
+			try { mkdirSync(path.dirname(memoryAbs),       { recursive: true }); } catch { /* noop */ }
+			if (!existsSync(memoryAbs)) {
+				const today = new Date().toISOString().slice(0, 10);
+				writeFileSync(memoryAbs,
+					`---\nupdated: ${today}\n---\n\n## Active Topics\n\n## Recent Decisions\n\n## Open Questions\n`,
+					"utf8",
+				);
+			}
+
+			void this.saveSettings();
+			card.remove();
+		});
 	}
 
 	private buildInput(root: HTMLElement): void {
 		const container = root.createDiv({ cls: "cv-input-container" });
 		this.inputBar = new InputBar(container, this.settings.model);
 		this.inputBar.setAgents(this.settings.agents, this.assetResolver);
-		this.inputBar.setVoiceService(this.voiceService, this.settings.voiceAutoSend);
+		const parakeetAvailable = (() => {
+			const configured = this.settings.parakeetPath;
+			if (configured) return fs.existsSync(configured);
+			return fs.existsSync(path.join(os.homedir(), ".local", "bin", "parakeet-mlx"));
+		})();
+		this.inputBar.setVoiceService(this.voiceService, this.settings.voiceAutoSend, parakeetAvailable);
 		this.inputBar.onSend((text) => this.handleSend(text));
 		this.inputBar.onModelChange((model) => {
 			this.settings.model = model;

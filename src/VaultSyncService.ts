@@ -18,6 +18,8 @@ export class VaultSyncService {
 		private cliPath: string,
 		private vaultRoot: string,
 		private vaultWriteDir: string,
+		private vaultThreadsDir: string,
+		private vaultMemoryPath: string,
 	) {}
 
 	/** Call on every user send — resets the idle countdown */
@@ -57,12 +59,23 @@ export class VaultSyncService {
 		console.log("[cv-vault-sync] Starting sync. Events to process:", unsaved.length);
 
 		try {
-			// Ensure write dir exists
-			const writePath = path.join(this.vaultRoot, this.vaultWriteDir);
-			mkdirSync(writePath, { recursive: true });
+			// Ensure write dirs exist
+			mkdirSync(path.join(this.vaultRoot, this.vaultWriteDir),  { recursive: true });
+			mkdirSync(path.join(this.vaultRoot, this.vaultThreadsDir), { recursive: true });
+
+			// Bootstrap memory file if missing
+			const memoryAbs = path.join(this.vaultRoot, this.vaultMemoryPath);
+			mkdirSync(path.dirname(memoryAbs), { recursive: true });
+			if (!require("fs").existsSync(memoryAbs)) {
+				const today = new Date().toISOString().slice(0, 10);
+				writeFileSync(memoryAbs,
+					`---\nupdated: ${today}\n---\n\n## Active Topics\n\n## Recent Decisions\n\n## Open Questions\n`,
+					"utf8",
+				);
+			}
 
 			const transcript = formatTranscript(unsaved);
-			const prompt = buildPrompt(transcript, this.vaultRoot, this.vaultWriteDir);
+			const prompt = buildPrompt(transcript, this.vaultRoot, this.vaultWriteDir, this.vaultThreadsDir, this.vaultMemoryPath);
 			await spawnOneShot(prompt, this.cliPath, this.vaultRoot);
 			this.onSaved(history.length);
 			console.log("[cv-vault-sync] Sync complete. New savedIndex:", history.length);
@@ -92,7 +105,7 @@ function formatTranscript(events: StoredEvent[]): string {
 
 // ─── Prompt ───────────────────────────────────────────────────────────────────
 
-function buildPrompt(transcript: string, vaultRoot: string, vaultWriteDir: string): string {
+function buildPrompt(transcript: string, vaultRoot: string, vaultWriteDir: string, vaultThreadsDir: string, vaultMemoryPath: string): string {
 	const now = new Date();
 	const date = now.toISOString().slice(0, 10);
 	const time = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }).replace(":", "");
@@ -102,7 +115,9 @@ function buildPrompt(transcript: string, vaultRoot: string, vaultWriteDir: strin
 	const hour12 = hour % 12 || 12;
 	const min = String(now.getMinutes()).padStart(2, "0");
 	const streamTime = `${hour12}:${min}${ampm}`;
-	const writeDir = path.join(vaultRoot, vaultWriteDir);
+	const writeDir   = path.join(vaultRoot, vaultWriteDir);
+	const threadsDir = path.join(vaultRoot, vaultThreadsDir);
+	const memoryFile = path.join(vaultRoot, vaultMemoryPath);
 
 	return `You are capturing thinking from a council session into the knowledge base. Today is ${date}, time is ${timeFormatted}.
 
@@ -141,11 +156,17 @@ date: "${date}"
 # Stream — ${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
 \`\`\`
 
-## Step 3: Route each entry to a thread
-Follow the stream operations protocol (search ~/Vault/Threads/, add entry, update frontmatter, regenerate brief). Create a new thread if nothing matches and there's enough substance.
+## Step 3: Route each entry to a topic
+Search \`${threadsDir}\` for an existing topic file that matches the entry's theme (check filenames and frontmatter). If a match exists, append the entry. If nothing matches and there's enough substance, create a new topic file with a short kebab-case filename (e.g. \`ai-tools.md\`). Topic files use this frontmatter:
+\`\`\`
+---
+topic: {topic name}
+created: ${date}
+---
+\`\`\`
 
 ## Step 4: Update memory index
-Read ~/Vault/System/memory.md and update:
+Read \`${memoryFile}\` and update:
 - Active Threads: update any threads touched
 - Recent Decisions: add any decisions made (keep 10 most recent)
 - Open Threads: add unresolved questions raised
@@ -168,7 +189,6 @@ function spawnOneShot(prompt: string, cliPath: string, vaultRoot: string): Promi
 		const args = [
 			"--print",
 			"--output-format", "text",
-			"--bare",   // sync call — skip hooks, skills, MCP, CLAUDE.md discovery
 			"--add-dir", vaultRoot,
 			"--model", "claude-haiku-4-5-20251001",
 			prompt,

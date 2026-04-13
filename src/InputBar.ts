@@ -668,9 +668,10 @@ export class InputBar {
 		this.assetResolver = assetResolver ?? null;
 	}
 
-	setVoiceService(service: VoiceService, autoSend: boolean): void {
+	setVoiceService(service: VoiceService, autoSend: boolean, available = true): void {
 		this.voiceService = service;
 		this.voiceAutoSend = autoSend;
+		this.voiceBtnEl.style.display = available ? "" : "none";
 
 		service.on("transcribed", (text: string) => {
 			void this.exitRecordingPhase().then(() => {

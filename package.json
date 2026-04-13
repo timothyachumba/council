@@ -1,6 +1,6 @@
 {
   "name": "council",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A multi-agent thinking surface for Obsidian, powered by Claude",
   "main": "main.js",
   "scripts": {

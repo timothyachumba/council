@@ -189,6 +189,9 @@ export interface CouncilSettings {
 	claudeCliPath: string | null;       // resolved CLI binary path
 	vaultReadDirs: string[];            // folders passed as --add-dir (relative to vault root)
 	vaultWriteDir: string;              // sync write destination (relative to vault root)
+	vaultThreadsDir: string;            // threads folder (relative to vault root)
+	vaultMemoryPath: string;            // memory index file (relative to vault root)
+	syncSetupDone: boolean;             // whether user has confirmed or skipped sync setup
 	agents: AgentConfig[];
 	agentSessions: Record<string, string | null>;
 	parakeetPath: string | null;
@@ -211,6 +214,9 @@ export const DEFAULT_SETTINGS: CouncilSettings = {
 	claudeCliPath: null,
 	vaultReadDirs: [],
 	vaultWriteDir: "Stream",
+	vaultThreadsDir: "Threads",
+	vaultMemoryPath: "System/memory.md",
+	syncSetupDone: false,
 	agents: DEFAULT_AGENTS,
 	agentSessions: {},
 	parakeetPath: null,

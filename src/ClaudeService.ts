@@ -45,7 +45,6 @@ export class ClaudeService extends EventEmitter {
 			"--output-format", "stream-json",
 			"--verbose",
 			"--include-partial-messages",
-			"--bare",   // skip hooks, skills, MCP, CLAUDE.md discovery — faster, more deterministic
 			"--model", model,
 		];
 

@@ -418,6 +418,108 @@
   font-style: italic;
 }
 
+/* ─── Vault sync setup card ──────────────────────────────────────────────── */
+
+.cv-setup-card {
+  background: var(--interactive-normal);
+  border-radius: var(--radius-m);
+  box-shadow: var(--input-shadow);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cv-setup-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cv-setup-card__icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.cv-setup-card__icon svg { width: 16px; height: 16px; }
+
+.cv-setup-card__title {
+  font-size: var(--font-ui-medium);
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.cv-setup-card__desc {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.cv-setup-card__paths {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cv-setup-card__path-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cv-setup-card__path-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.cv-setup-card__path-icon svg { width: 14px; height: 14px; }
+
+.cv-setup-card__path-label {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  width: 64px;
+  flex-shrink: 0;
+}
+
+.cv-setup-card__path-input {
+  flex: 1;
+  height: 26px;
+  padding: 0 8px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-family: var(--font-monospace);
+  outline: none;
+  transition: border-color var(--anim-duration-fast);
+}
+
+.cv-setup-card__path-input:focus {
+  border-color: var(--interactive-accent);
+}
+
+.cv-setup-card__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+.cv-setup-card__confirm {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.cv-setup-card__confirm:hover {
+  background: var(--interactive-accent-hover);
+  box-shadow: var(--input-shadow);
+}
+
 /* ─── Error ──────────────────────────────────────────────────────────────── */
 
 .cv-error {
@@ -1151,98 +1253,38 @@
 }
 
 /* ── Settings tab ────────────────────────────────────────────────────────── */
-.cv-settings-cli-status {
-  margin: -0.5rem 0 1rem 0;
-  font-size: 0.8rem;
-}
 
-.cv-cli-status--found {
+.cv-cli-status {
+  display: flex;
+  align-items: center;
   color: var(--color-green);
+  flex-shrink: 0;
 }
 
-.cv-cli-status--missing {
-  color: var(--color-orange);
+.cv-cli-status svg {
+  width: 16px;
+  height: 16px;
 }
 
-.cv-settings-list {
-  margin-bottom: 0.5rem;
+.cv-status-label {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--color-green) !important;
+  font-size: var(--font-ui-small);
+  padding: 0 !important;
+  width: auto !important;
+  cursor: default;
+  text-align: right;
 }
 
-.cv-settings-list-row {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 6px;
-  align-items: center;
-}
-
-.cv-settings-list-input {
-  flex: 1;
-  padding: 4px 8px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  background: var(--background-secondary);
-  color: var(--text-normal);
-  font-size: 0.9rem;
-}
-
-.cv-settings-list-remove {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  padding: 0 6px;
-}
-
-.cv-settings-list-remove:hover {
-  color: var(--color-red);
-}
-
-.cv-settings-agents {
-  margin-top: 0.5rem;
-}
-
-.cv-settings-agent-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--background-modifier-border);
+.cv-btn-delete {
+  color: var(--color-red) !important;
 }
 
 .cv-settings-agent-swatch {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: none;
   flex-shrink: 0;
-}
-
-.cv-settings-agent-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.cv-settings-agent-name {
-  font-weight: 500;
-  font-size: 0.9rem;
-}
-
-.cv-settings-agent-desc {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cv-btn--danger {
-  color: var(--color-red);
-}
-
-.cv-btn--add {
-  margin-top: 0.75rem;
 }
